@@ -28,6 +28,7 @@ const state = {
 
 const bookmarkGrid = document.getElementById("bookmark-grid");
 const searchInput = document.getElementById("search-input");
+const searchButton = document.getElementById("search-button");
 const currentCategoryTitle = document.querySelector(".current-category");
 const collectionTitle = document.getElementById("collection-title");
 const tagFilter = document.getElementById("tag-filter");
@@ -42,6 +43,8 @@ console.log('Element checks:');
 console.log('addDemoBtn:', addDemoBtn);
 console.log('newCollectionBtn:', newCollectionBtn);
 console.log('logoutBtn:', logoutBtn);
+console.log('searchButton:', searchButton);
+console.log('searchInput:', searchInput);
 
 // Initialize cookie consent dialog
 if (cookieAcceptBtn) {
@@ -239,7 +242,25 @@ function wireEvents() {
 
   searchInput?.addEventListener("input", (e) => {
     state.search = e.target.value;
+    console.log('Search input changed:', state.search);
     loadBookmarks().then(() => render());
+  });
+
+  searchButton?.addEventListener("click", (e) => {
+    e.preventDefault();
+    console.log('Search button clicked, searching for:', searchInput.value);
+    state.search = searchInput.value;
+    loadBookmarks().then(() => render());
+  });
+
+  // Allow Enter key to trigger search
+  searchInput?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      console.log('Enter key pressed, searching for:', searchInput.value);
+      state.search = searchInput.value;
+      loadBookmarks().then(() => render());
+    }
   });
 
   addDemoBtn?.addEventListener("click", () => {
