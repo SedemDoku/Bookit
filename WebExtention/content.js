@@ -119,9 +119,25 @@ function onSubmit(e) {
     date: new Date().toLocaleString(),
   };
 
+  // Show saving status
+  const submitBtn = form.querySelector('button[type="submit"]');
+  const originalText = submitBtn.textContent;
+  submitBtn.textContent = 'Saving...';
+  submitBtn.disabled = true;
+
   chrome.runtime.sendMessage(
     { type: "SAVE_BOOKMARK", payload },
-    () => closeModal()
+    (response) => {
+      if (response && response.ok) {
+        console.log('Bookmark saved successfully');
+        closeModal();
+      } else {
+        console.error('Failed to save bookmark');
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+        alert('Failed to save bookmark. Please try again.');
+      }
+    }
   );
 }
 

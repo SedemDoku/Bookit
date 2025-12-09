@@ -61,8 +61,16 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "SAVE_BOOKMARK") {
-    saveItem(message.payload).then(() => sendResponse({ ok: true }));
-    return true; // keep channel open
+    saveItem(message.payload)
+      .then((result) => {
+        console.log('saveItem result:', result);
+        sendResponse({ ok: true, data: result });
+      })
+      .catch((error) => {
+        console.error('saveItem error:', error);
+        sendResponse({ ok: false, error: error.message });
+      });
+    return true; // keep channel open for async response
   }
 });
 
@@ -96,6 +104,9 @@ async function saveItem(newItem) {
   };
   
   try {
+    console.log('Saving bookmark with user_id:', userId, 'email:', userEmail);
+    console.log('Bookmark data:', bookmarkData);
+    
     const response = await fetch(`${apiUrl}/bookmarks.php`, {
       method: 'POST',
       headers: {
@@ -106,12 +117,16 @@ async function saveItem(newItem) {
       body: JSON.stringify(bookmarkData)
     });
     
+    console.log('Response status:', response.status);
     const data = await response.json();
+    console.log('Response data:', data);
+    
     if (!data.success) {
       console.error('Failed to save bookmark:', data.error);
       // Fallback to local storage if API fails
       return fallbackSave(newItem);
     }
+    console.log('Bookmark saved successfully');
     return data;
   } catch (error) {
     console.error('Error saving bookmark:', error);

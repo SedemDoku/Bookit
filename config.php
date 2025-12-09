@@ -5,10 +5,6 @@ define('DB_NAME', getenv('DB_NAME') ?: 'bookmark_db');
 define('DB_USER', getenv('DB_USER') ?: 'root');
 define('DB_PASS', getenv('DB_PASS') ?: '');
 
-// Session configuration
-define('SESSION_LIFETIME', 3600 * 24 * 7); // 7 days
-define('SESSION_TIMEOUT', 3600 * 2); // 2 hours of inactivity
-
 // Security configuration
 define('ALLOWED_ORIGINS', ['http://169.239.251.102:341', 'http://localhost', 'http://127.0.0.1']);
 define('MAX_FILE_SIZE', 50 * 1024 * 1024); // 50MB
@@ -38,33 +34,6 @@ function setCORSHeaders() {
     header('Access-Control-Max-Age: 86400');
 }
 
-// Start session with security settings
-if (session_status() === PHP_SESSION_NONE) {
-    // Configure session security
-    ini_set('session.cookie_httponly', 1);
-    ini_set('session.use_only_cookies', 1);
-    ini_set('session.cookie_secure', 0); // Set to 1 if using HTTPS
-    ini_set('session.cookie_samesite', 'Strict');
-    
-    session_start();
-    
-    // Regenerate session ID periodically to prevent session fixation
-    if (!isset($_SESSION['created'])) {
-        $_SESSION['created'] = time();
-    } else if (time() - $_SESSION['created'] > 1800) { // 30 minutes
-        session_regenerate_id(true);
-        $_SESSION['created'] = time();
-    }
-    
-    // Check session timeout
-    if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > SESSION_TIMEOUT)) {
-        session_unset();
-        session_destroy();
-        session_start();
-    }
-    $_SESSION['last_activity'] = time();
-}
-
 // Database connection
 function getDB() {
     static $pdo = null;
@@ -85,35 +54,30 @@ function getDB() {
     return $pdo;
 }
 
-// Check if user is logged in
-function isLoggedIn() {
-    // Check session variables exist
-    if (!isset($_SESSION['user_id']) || !isset($_SESSION['username'])) {
-        return false;
+// Authenticate a user based on explicit headers (stateless)
+function authenticateUserFromHeaders() {
+    $userId = $_SERVER['HTTP_X_USER_ID'] ?? $_GET['user_id'] ?? null;
+    $email = $_SERVER['HTTP_X_USER_EMAIL'] ?? $_GET['user_email'] ?? null;
+
+    if (!$userId || !$email) {
+        return null;
     }
-    
-    // Verify user still exists in database
+
+    $userId = (int)$userId;
+    if ($userId <= 0) {
+        return null;
+    }
+
     try {
         $db = getDB();
-        $stmt = $db->prepare("SELECT id FROM users WHERE id = ? AND username = ?");
-        $stmt->execute([$_SESSION['user_id'], $_SESSION['username']]);
-        if (!$stmt->fetch()) {
-            // User doesn't exist, destroy session
-            session_unset();
-            session_destroy();
-            return false;
-        }
+        $stmt = $db->prepare("SELECT id FROM users WHERE id = ? AND email = ? LIMIT 1");
+        $stmt->execute([$userId, $email]);
+        $row = $stmt->fetch();
+        return $row ? $userId : null;
     } catch (Exception $e) {
-        error_log("Error checking user: " . $e->getMessage());
-        return false;
+        error_log('Header auth failed: ' . $e->getMessage());
+        return null;
     }
-    
-    return true;
-}
-
-// Get current user ID
-function getUserId() {
-    return $_SESSION['user_id'] ?? null;
 }
 
 // JSON response helper
@@ -135,23 +99,6 @@ function jsonSuccess($data = null, $message = null) {
     if ($message) $response['message'] = $message;
     if ($data !== null) $response['data'] = $data;
     jsonResponse($response);
-}
-
-// Generate CSRF token
-function generateCSRFToken() {
-    if (empty($_SESSION['csrf_token'])) {
-        $_SESSION['csrf_token'] = bin2hex(random_bytes(CSRF_TOKEN_LENGTH / 2));
-    }
-    return $_SESSION['csrf_token'];
-}
-
-// Verify CSRF token
-function verifyCSRFToken($token = null) {
-    if (empty($_SESSION['csrf_token'])) {
-        return false;
-    }
-    $token = $token ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? $_POST['csrf_token'] ?? '');
-    return hash_equals($_SESSION['csrf_token'], $token);
 }
 
 // Sanitize file upload name

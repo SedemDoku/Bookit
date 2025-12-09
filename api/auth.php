@@ -10,18 +10,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
-// CSRF verification for state-changing requests (skip for signup/login with email)
-// These endpoints don't need CSRF since they require valid email + password
-if ($_SERVER['REQUEST_METHOD'] !== 'GET' && $_SERVER['REQUEST_METHOD'] !== 'OPTIONS') {
-    $action = $_GET['action'] ?? '';
-    // Skip CSRF for signup and login (email/password is sufficient protection)
-    if (!in_array($action, ['signup', 'login']) && !isset($_SERVER['HTTP_X_USER_ID'])) {
-        if (!verifyCSRFToken()) {
-            jsonError('Invalid CSRF token', 403);
-        }
-    }
-}
-
 $method = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? '';
 
@@ -51,13 +39,10 @@ try {
         case 'check':
             handleCheckAuth();
             break;
-            
-        case 'csrf-token':
-            // Return CSRF token for authenticated users
-            if (!isLoggedIn()) {
-                jsonError('Not authenticated', 401);
-            }
-            jsonSuccess(['token' => generateCSRFToken()]);
+        
+        case 'user':
+            // Get current user info
+            handleGetUser();
             break;
             
         default:
@@ -124,11 +109,6 @@ function handleSignup() {
         $stmt->execute([$userId, $collectionName]);
     }
     
-    // Set session
-    $_SESSION['user_id'] = $userId;
-    $_SESSION['username'] = $username;
-    $_SESSION['email'] = $email;
-    
     jsonSuccess([
         'user_id' => $userId,
         'username' => $username,
@@ -137,11 +117,6 @@ function handleSignup() {
 }
 
 function handleLogin() {
-    // Prevent login if already logged in (for web app)
-    if (isLoggedIn() && !isset($_SERVER['HTTP_X_USER_ID'])) {
-        jsonError('Already logged in', 400);
-    }
-    
     $data = json_decode(file_get_contents('php://input'), true);
     
     $email = trim($data['email'] ?? '');
@@ -151,9 +126,9 @@ function handleLogin() {
         jsonError('Email and password are required');
     }
     
-    // Rate limiting: prevent brute force (simple check)
-    $loginAttempts = $_SESSION['login_attempts'] ?? 0;
-    $lastAttempt = $_SESSION['last_login_attempt'] ?? 0;
+    // Rate limiting: check cookies for login attempts (stored in persistent cookie)
+    $loginAttempts = isset($_COOKIE['login_attempts']) ? (int)$_COOKIE['login_attempts'] : 0;
+    $lastAttempt = isset($_COOKIE['last_login_attempt']) ? (int)$_COOKIE['last_login_attempt'] : 0;
     
     if ($loginAttempts >= 5 && (time() - $lastAttempt) < 300) { // 5 attempts, 5 min lockout
         jsonError('Too many login attempts. Please try again in 5 minutes.', 429);
@@ -165,24 +140,39 @@ function handleLogin() {
     $user = $stmt->fetch();
     
     if (!$user || !password_verify($password, $user['password_hash'])) {
-        $_SESSION['login_attempts'] = $loginAttempts + 1;
-        $_SESSION['last_login_attempt'] = time();
+        // Update login attempt cookie
+        setcookie('login_attempts', $loginAttempts + 1, [
+            'expires' => time() + 300,
+            'path' => '/',
+            'secure' => false,
+            'httponly' => true,
+            'samesite' => 'Strict'
+        ]);
+        setcookie('last_login_attempt', time(), [
+            'expires' => time() + 300,
+            'path' => '/',
+            'secure' => false,
+            'httponly' => true,
+            'samesite' => 'Strict'
+        ]);
         jsonError('Invalid email or password', 401);
     }
     
-    // Reset login attempts on successful login
-    unset($_SESSION['login_attempts']);
-    unset($_SESSION['last_login_attempt']);
-    
-    // Regenerate session ID on login for security
-    session_regenerate_id(true);
-    
-    // Set session
-    $_SESSION['user_id'] = $user['id'];
-    $_SESSION['username'] = $user['username'];
-    $_SESSION['email'] = $user['email'];
-    $_SESSION['created'] = time();
-    $_SESSION['last_activity'] = time();
+    // Reset login attempt cookies on successful login
+    setcookie('login_attempts', '', [
+        'expires' => time() - 3600,
+        'path' => '/',
+        'secure' => false,
+        'httponly' => true,
+        'samesite' => 'Strict'
+    ]);
+    setcookie('last_login_attempt', '', [
+        'expires' => time() - 3600,
+        'path' => '/',
+        'secure' => false,
+        'httponly' => true,
+        'samesite' => 'Strict'
+    ]);
     
     // Generate API token for extension (simple hash of user_id + email + timestamp)
     $token = hash('sha256', $user['id'] . $user['email'] . time() . 'bookmark_secret');
@@ -196,26 +186,6 @@ function handleLogin() {
 }
 
 function handleLogout() {
-    // Clear all session data
-    $_SESSION = array();
-    
-    // Get the session cookie name
-    $cookieName = session_name();
-    
-    // Destroy the session first
-    session_destroy();
-    
-    // Then delete the session cookie with proper parameters to ensure it's removed on client side
-    if (isset($_COOKIE[$cookieName])) {
-        setcookie($cookieName, '', array(
-            'expires' => time() - 3600,
-            'path' => '/',
-            'secure' => false,
-            'httponly' => true,
-            'samesite' => 'Strict'
-        ));
-    }
-    
     // Add cache prevention headers
     header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
     header('Pragma: no-cache');
@@ -226,14 +196,41 @@ function handleLogout() {
 
 
 function handleCheckAuth() {
-    if (isLoggedIn()) {
-        jsonSuccess([
-            'user_id' => $_SESSION['user_id'],
-            'username' => $_SESSION['username'],
-            'email' => $_SESSION['email']
-        ]);
-    } else {
+    $userId = authenticateUserFromHeaders();
+    if (!$userId) {
         jsonError('Not authenticated', 401);
     }
+
+    jsonSuccess([
+        'authenticated' => true,
+        'user_id' => $userId,
+        'message' => 'Header authentication valid'
+    ]);
 }
 
+function handleGetUser() {
+    // Get user info from database or request headers
+    $userId = $_SERVER['HTTP_X_USER_ID'] ?? null;
+    
+    if (!$userId) {
+        jsonError('User information not available', 400);
+    }
+    
+    $userId = (int)$userId;
+    
+    try {
+        $db = getDB();
+        $stmt = $db->prepare("SELECT id, username, email FROM users WHERE id = ?");
+        $stmt->execute([$userId]);
+        $user = $stmt->fetch();
+        
+        if (!$user) {
+            jsonError('User not found', 404);
+        }
+        
+        jsonSuccess($user);
+    } catch (Exception $e) {
+        error_log("Error fetching user: " . $e->getMessage());
+        jsonError('Failed to fetch user information', 500);
+    }
+}

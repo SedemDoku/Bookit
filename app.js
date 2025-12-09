@@ -1,3 +1,19 @@
+const USER_STORAGE_KEY = 'appUser';
+
+function getStoredUser() {
+  try {
+    const raw = localStorage.getItem(USER_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (err) {
+    console.error('Failed to parse stored user', err);
+    return null;
+  }
+}
+
+function clearStoredUser() {
+  localStorage.removeItem(USER_STORAGE_KEY);
+}
+let currentUser = null;
 // Bookmark Manager - PHP/MySQL Backend Integration
 // API_BASE is defined in index.php as a global variable
 
@@ -19,17 +35,57 @@ const addDemoBtn = document.getElementById("add-demo");
 const collectionsList = document.getElementById("collections-list");
 const newCollectionBtn = document.getElementById("new-collection-btn");
 const logoutBtn = document.getElementById("logout-btn");
+const cookieAcceptBtn = document.getElementById("cookie-accept-btn");
+const cookieDeclineBtn = document.getElementById("cookie-decline-btn");
 
 console.log('Element checks:');
 console.log('addDemoBtn:', addDemoBtn);
 console.log('newCollectionBtn:', newCollectionBtn);
 console.log('logoutBtn:', logoutBtn);
 
+// Initialize cookie consent dialog
+if (cookieAcceptBtn) {
+  cookieAcceptBtn.addEventListener("click", () => {
+    CookieManager.acceptCookies();
+  });
+}
+
+if (cookieDeclineBtn) {
+  cookieDeclineBtn.addEventListener("click", () => {
+    CookieManager.declineCookies();
+  });
+}
+
+// Show cookie consent dialog on page load if needed
+window.addEventListener("load", () => {
+  CookieManager.showConsentDialogIfNeeded();
+});
+
 init();
 
 async function init() {
   console.log('Initializing app...');
   console.log('API_BASE:', API_BASE);
+  currentUser = getStoredUser();
+  if (!currentUser) {
+    window.location.href = 'login.html?error=session_expired';
+    return;
+  }
+  
+  // Load user information first
+  const user = await loadUser();
+  if (!user) {
+    window.location.href = 'login.html?error=session_expired';
+    return;
+  }
+  currentUser = { ...currentUser, ...user };
+  
+  // Update UI with user info
+  const usernameDisplay = document.getElementById('username-display');
+  if (usernameDisplay) {
+    usernameDisplay.textContent = user.username;
+  }
+  
   await loadCollections();
   console.log('Collections loaded:', state.collections.length);
   await loadBookmarks();
@@ -40,10 +96,39 @@ async function init() {
   console.log('Initial render complete');
 }
 
+async function loadUser() {
+  try {
+    const response = await fetch(`${API_BASE}/auth.php?action=user`, {
+      credentials: 'include',
+      headers: {
+        'X-User-ID': currentUser.user_id,
+        'X-User-Email': currentUser.email
+      }
+    });
+    
+    if (!response.ok) {
+      return null;
+    }
+    
+    const data = await response.json();
+    if (data.success) {
+      return data.data;
+    }
+    return null;
+  } catch (error) {
+    console.error("Failed to load user:", error);
+    return null;
+  }
+}
+
 async function loadCollections() {
   try {
     const response = await fetch(`${API_BASE}/collections.php`, {
-      credentials: 'include'
+      credentials: 'include',
+      headers: {
+        'X-User-ID': currentUser.user_id,
+        'X-User-Email': currentUser.email
+      }
     });
     const data = await response.json();
     
@@ -76,7 +161,11 @@ async function loadBookmarks() {
     if (params.toString()) url += '?' + params.toString();
     
     const response = await fetch(url, {
-      credentials: 'include'
+      credentials: 'include',
+      headers: {
+        'X-User-ID': currentUser.user_id,
+        'X-User-Email': currentUser.email
+      }
     });
     const data = await response.json();
     
@@ -173,10 +262,12 @@ function wireEvents() {
       console.log('Logout response:', response.status);
       const data = await response.json();
       console.log('Logout data:', data);
+      clearStoredUser();
       // Redirect to login page with a flag to prevent auto-login
       window.location.href = 'login.html?action=logout';
     } catch (error) {
       console.error("Logout error:", error);
+      clearStoredUser();
       window.location.href = 'login.html?action=logout';
     }
   });
@@ -404,7 +495,11 @@ async function createCollection(name, parentId = null) {
   try {
     const response = await fetch(`${API_BASE}/collections.php`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-User-ID': currentUser.user_id,
+        'X-User-Email': currentUser.email
+      },
       credentials: 'include',
       body: JSON.stringify({ name, parent_id: parentId })
     });
@@ -425,7 +520,11 @@ async function deleteBookmark(id) {
   try {
     const response = await fetch(`${API_BASE}/bookmarks.php?id=${id}`, {
       method: 'DELETE',
-      credentials: 'include'
+      credentials: 'include',
+      headers: {
+        'X-User-ID': currentUser.user_id,
+        'X-User-Email': currentUser.email
+      }
     });
     const data = await response.json();
     return data.success;
@@ -490,7 +589,11 @@ async function createBookmark(bookmark) {
   try {
     const response = await fetch(`${API_BASE}/bookmarks.php`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-User-ID': currentUser.user_id,
+        'X-User-Email': currentUser.email
+      },
       credentials: 'include',
       body: JSON.stringify(bookmark)
     });

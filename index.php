@@ -1,26 +1,4 @@
-<?php
-require_once 'config.php';
-
-// Strict security check - redirect to login if not authenticated
-if (!isLoggedIn()) {
-    // Clear any partial session data
-    session_unset();
-    session_destroy();
-    
-    // Redirect to login with message
-    header('Location: login.html?error=session_expired');
-    exit;
-}
-
-// Verify user ID matches session
-$sessionUserId = $_SESSION['user_id'] ?? null;
-if ($sessionUserId !== getUserId()) {
-    session_unset();
-    session_destroy();
-    header('Location: login.html?error=invalid_session');
-    exit;
-}
-?>
+<?php require_once 'config.php'; ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -28,6 +6,7 @@ if ($sessionUserId !== getUserId()) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Multi-Media Bookmarks</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="cookies.css">
 </head>
 <body>
 
@@ -52,7 +31,7 @@ if ($sessionUserId !== getUserId()) {
                 Add Bookmark
             </button>
             <div class="user-menu">
-                <span class="username"><?php echo htmlspecialchars($_SESSION['username'] ?? 'User'); ?></span>
+                <span class="username" id="username-display">User</span>
                 <button class="logout-btn" id="logout-btn">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
@@ -203,11 +182,24 @@ if ($sessionUserId !== getUserId()) {
             </form>
         </div>
     </div>
+    
+    <!-- Cookie Consent Dialog -->
+    <div id="cookie-consent-dialog" class="cookie-consent-dialog">
+        <div class="cookie-content">
+            <h3>Cookie Notice</h3>
+            <p>We use cookies to manage your session and keep you logged in. Cookies are essential for the app to function properly.</p>
+            <p>We use a minimal cookie only for consent preferences. Authentication is handled without server sessions.</p>
+            <div class="cookie-actions">
+                <button id="cookie-decline-btn" class="cookie-btn cookie-btn-secondary">Decline</button>
+                <button id="cookie-accept-btn" class="cookie-btn cookie-btn-primary">Accept</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         const API_BASE = '/Personal_Web_Tech_Project/api';
-        const USER_ID = <?php echo json_encode(getUserId()); ?>;
     </script>
+    <script src="cookies.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

@@ -84,10 +84,12 @@ async function handleLogin(e) {
     if (data.success) {
       // Store user info
       currentUser = {
-        id: data.data.user_id,
+        id: parseInt(data.data.user_id, 10),
         email: data.data.email,
         username: data.data.username
       };
+      
+      console.log('Storing user data:', currentUser);
       
       await chrome.storage.local.set({
         user_id: currentUser.id,
@@ -95,6 +97,8 @@ async function handleLogin(e) {
         user_username: currentUser.username,
         apiUrl: API_BASE
       });
+      
+      console.log('User data stored successfully');
       
       showAlert('Login successful!', 'success');
       setTimeout(() => {

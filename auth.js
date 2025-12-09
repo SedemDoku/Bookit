@@ -1,5 +1,53 @@
 // Authentication with PHP backend
 const API_BASE = '/Personal_Web_Tech_Project/api';
+const USER_STORAGE_KEY = 'appUser';
+
+function saveUserSession(user) {
+  if (!user) return;
+  localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
+}
+
+function loadUserSession() {
+  try {
+    const raw = localStorage.getItem(USER_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (err) {
+    console.error('Failed to parse stored user', err);
+    return null;
+  }
+}
+
+function clearUserSession() {
+  localStorage.removeItem(USER_STORAGE_KEY);
+}
+
+const alertBox = document.getElementById("alert");
+const loginForm = document.getElementById("login-form");
+const signupForm = document.getElementById("signup-form");
+const toggleButtons = document.querySelectorAll(".toggle-btn");
+const cookieAcceptBtn = document.getElementById("cookie-accept-btn");
+const cookieDeclineBtn = document.getElementById("cookie-decline-btn");
+
+const specialCharRegex = /[!@#$%^&*()_\-+={[}\]|:;"'<>,.?/]/;
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Helper function to show error messages
+function showError(message) {
+  if (alertBox) {
+    alertBox.textContent = message;
+    alertBox.style.display = "block";
+    alertBox.style.color = "red";
+  }
+}
+
+// Helper function to show success messages
+function showSuccess(message) {
+  if (alertBox) {
+    alertBox.textContent = message;
+    alertBox.style.display = "block";
+    alertBox.style.color = "green";
+  }
+}
 
 // Check if already logged in and redirect
 (async function checkAuth() {
@@ -25,39 +73,61 @@ const API_BASE = '/Personal_Web_Tech_Project/api';
     return;
   }
   
+  const storedUser = loadUserSession();
+  if (!storedUser) {
+    return;
+  }
+
   try {
     const response = await fetch(`${API_BASE}/auth.php?action=check`, {
       method: 'GET',
-      credentials: 'include'
+      credentials: 'include',
+      headers: {
+        'X-User-ID': storedUser.user_id,
+        'X-User-Email': storedUser.email
+      }
     });
     
-    // If status is not 200, user is not authenticated
+    console.log('Auth check status:', response.status);
+    
     if (response.status !== 200) {
-      console.log('User is not logged in (status:', response.status + ')');
+      clearUserSession();
       return;
     }
     
     const data = await response.json();
-    if (data.success) {
-      // Already logged in, redirect to main page
+    console.log('Auth check response:', data);
+    
+    if (data.success && data.authenticated) {
       console.log('User is logged in, redirecting to index.php');
       window.location.href = 'index.php';
     } else {
-      console.log('User is not logged in');
+      clearUserSession();
+      console.log('User is not logged in:', data);
     }
   } catch (error) {
-    // Not logged in, stay on login page
+    clearUserSession();
     console.log('Error checking auth:', error);
   }
 })();
 
-const alertBox = document.getElementById("alert");
-const loginForm = document.getElementById("login-form");
-const signupForm = document.getElementById("signup-form");
-const toggleButtons = document.querySelectorAll(".toggle-btn");
+// Initialize cookie consent dialog
+if (cookieAcceptBtn) {
+  cookieAcceptBtn.addEventListener("click", () => {
+    CookieManager.acceptCookies();
+  });
+}
 
-const specialCharRegex = /[!@#$%^&*()_\-+={[}\]|:;"'<>,.?/]/;
-const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+if (cookieDeclineBtn) {
+  cookieDeclineBtn.addEventListener("click", () => {
+    CookieManager.declineCookies();
+  });
+}
+
+// Show cookie consent dialog on page load if needed
+window.addEventListener("load", () => {
+  CookieManager.showConsentDialogIfNeeded();
+});
 
 toggleButtons.forEach((btn) => {
   btn.addEventListener("click", () => {
@@ -94,6 +164,7 @@ if (loginForm) {
       const data = await response.json();
       
       if (data.success) {
+        saveUserSession(data.data);
         showSuccess("Login successful! Redirecting...");
         setTimeout(() => {
           window.location.href = 'index.php';
@@ -139,6 +210,7 @@ if (signupForm) {
       const data = await response.json();
       
       if (data.success) {
+        saveUserSession(data.data);
         showSuccess("Account created! Redirecting...");
         setTimeout(() => {
           window.location.href = 'index.php';
@@ -176,17 +248,5 @@ function validateMatch(password, confirm) {
     return ["Password and confirmation must match."];
   }
   return [];
-}
-
-function showError(msg) {
-  if (!alertBox) return;
-  alertBox.className = "error";
-  alertBox.innerHTML = msg;
-}
-
-function showSuccess(msg) {
-  if (!alertBox) return;
-  alertBox.className = "success";
-  alertBox.innerHTML = msg;
 }
 

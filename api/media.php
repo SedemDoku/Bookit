@@ -36,25 +36,8 @@ if (empty($parts[0]) || !is_numeric($parts[0])) {
 }
 $fileOwnerId = (int)$parts[0];
 
-// Check authentication
-$userId = null;
-
-if (isLoggedIn()) {
-    $userId = getUserId();
-} else {
-    // Try header-based auth for extension
-    $extensionUserId = $_SERVER['HTTP_X_USER_ID'] ?? $_GET['user_id'] ?? null;
-    $extensionEmail = $_SERVER['HTTP_X_USER_EMAIL'] ?? $_GET['user_email'] ?? null;
-    
-    if ($extensionUserId && $extensionEmail) {
-        $db = getDB();
-        $stmt = $db->prepare("SELECT id FROM users WHERE id = ? AND email = ?");
-        $stmt->execute([$extensionUserId, $extensionEmail]);
-        if ($stmt->fetch()) {
-            $userId = (int)$extensionUserId;
-        }
-    }
-}
+// Check authentication via explicit headers (stateless)
+$userId = authenticateUserFromHeaders();
 
 // Verify user owns this file
 if (!$userId || $userId !== $fileOwnerId) {

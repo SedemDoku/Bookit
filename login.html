@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login | Bookmarks</title>
   <link rel="stylesheet" href="auth.css">
+  <link rel="stylesheet" href="cookies.css">
 </head>
 <body>
   <div class="auth-card">
@@ -32,6 +33,20 @@
       </div>
     </form>
   </div>
+
+  <!-- Cookie Consent Dialog -->
+  <div id="cookie-consent-dialog" class="cookie-consent-dialog">
+    <div class="cookie-content">
+      <h3>Cookie Notice</h3>
+      <p>We use cookies to manage your session and keep you logged in. Cookies are essential for the app to function properly.</p>
+      <div class="cookie-actions">
+        <button id="cookie-decline-btn" class="cookie-btn cookie-btn-secondary">Decline</button>
+        <button id="cookie-accept-btn" class="cookie-btn cookie-btn-primary">Accept</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="cookies.js"></script>
   <script src="auth.js"></script>
 </body>
 </html>

@@ -1,0 +1,1 @@
+-- Session-based authentication removed. Migration intentionally left blank.

@@ -10,35 +10,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
-// Check authentication - support both session (web) and token/header (extension)
-$userId = null;
-$isExtensionRequest = false;
+// Stateless authentication via explicit headers
+$userId = authenticateUserFromHeaders();
 
-// Try session first (web app)
-if (isLoggedIn()) {
-    $userId = getUserId();
-    // Update last activity
-    $_SESSION['last_activity'] = time();
-} else {
-    // Try extension authentication via headers
-    $extensionUserId = $_SERVER['HTTP_X_USER_ID'] ?? $_GET['user_id'] ?? null;
-    $extensionEmail = $_SERVER['HTTP_X_USER_EMAIL'] ?? $_GET['user_email'] ?? null;
-    
-    if ($extensionUserId && $extensionEmail) {
-        // Verify user exists and email matches
-        $db = getDB();
-        $stmt = $db->prepare("SELECT id FROM users WHERE id = ? AND email = ?");
-        $stmt->execute([$extensionUserId, $extensionEmail]);
-        $user = $stmt->fetch();
-        
-        if ($user) {
-            $userId = (int)$extensionUserId;
-            $isExtensionRequest = true;
-        }
-    }
-}
-
-// Strict authentication check
 if (!$userId) {
     http_response_code(401);
     jsonError('Authentication required. Please log in.', 401);
