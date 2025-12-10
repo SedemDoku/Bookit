@@ -242,8 +242,7 @@ async function deleteBookmark(id) {
 function renderContent(item) {
   let icon = '🔗';
   let contentHtml = '';
-  const mediaUrl = item.type === 'audio' || item.type === 'video' ? `http://localhost/Personal_Web_Tech_Project/api/media.php?f=${encodeURIComponent(item.content)}&user_id=${currentUser.id}&user_email=${currentUser.email}` : item.content;
-  
+
   if (item.type === 'text') {
     icon = '📄';
     const snippet = item.content ? `"${escapeHTML(item.content.slice(0, 140))}${item.content.length > 140 ? '…' : ''}"` : '';
@@ -251,15 +250,9 @@ function renderContent(item) {
   } else if (item.type === 'image') {
     icon = '🖼️';
     contentHtml = `
-      <img src="${escapeHTML(item.content)}" class="media-preview" onerror="this.style.display='none'">
+      <img src="${escapeHTML(item.content)}" class="media-preview" style="max-width:100%; border-radius:8px;">
       <div style="margin-top:4px;"><a class="link" href="${escapeHTML(item.content)}" target="_blank">View full</a></div>
     `;
-  } else if (item.type === 'audio') {
-    icon = '🎵';
-    contentHtml = `<audio controls src="${escapeHTML(mediaUrl)}" class="media-preview"></audio>`;
-  } else if (item.type === 'video') {
-    icon = '📺';
-    contentHtml = `<video controls src="${escapeHTML(mediaUrl)}" class="media-preview" style="max-width:100%; max-height:150px;"></video>`;
   } else {
     contentHtml = `<a class="link" href="${escapeHTML(item.url)}" target="_blank">${escapeHTML(item.url)}</a>`;
   }
@@ -274,9 +267,7 @@ function renderTags(tags = []) {
 function typeLabel(type) {
   switch (type) {
     case 'image': return 'Image';
-    case 'audio': return 'Audio';
     case 'text': return 'Text';
-    case 'video': return 'Video';
     default: return 'Link';
   }
 }

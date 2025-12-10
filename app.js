@@ -448,17 +448,9 @@ function renderMediaPreview(item) {
   if (item.type === "image") {
     return `<img src="${escapeHTML(item.content)}" alt="${escapeHTML(item.title)}" class="preview-img">`;
   }
-  if (item.type === "audio") {
-    const mediaUrl = `api/media.php?f=${encodeURIComponent(item.content)}`;
-    return `<audio controls src="${escapeHTML(mediaUrl)}" class="preview-audio"></audio>`;
-  }
   if (item.type === "text") {
     const snippet = item.content || item.description || "Text snippet";
     return `<p>${escapeHTML(snippet.slice(0, 120))}${snippet.length > 120 ? "..." : ""}</p>`;
-  }
-  if (item.type === "video") {
-    const mediaUrl = `api/media.php?f=${encodeURIComponent(item.content)}`;
-    return `<video controls src="${escapeHTML(mediaUrl)}" class="preview-video" style="max-width:100%; max-height:200px;"></video>`;
   }
   return `<span class="link-icon">🔗</span>`;
 }
@@ -493,14 +485,10 @@ function renderTagFilter() {
 
 function typeLabel(type) {
   switch (type) {
-    case "video":
-      return "Video";
-    case "text":
-      return "Text";
-    case "audio":
-      return "Audio";
     case "image":
       return "Image";
+    case "text":
+      return "Text";
     default:
       return "Link";
   }

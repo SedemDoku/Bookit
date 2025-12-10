@@ -5,6 +5,15 @@
  */
 require_once '../config.php';
 
+// Set CORS headers
+setCORSHeaders();
+
+// Handle preflight requests
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
+
 // Only allow GET requests
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     http_response_code(405);
@@ -37,7 +46,23 @@ if (empty($parts[0]) || !is_numeric($parts[0])) {
 $fileOwnerId = (int)$parts[0];
 
 // Check authentication via explicit headers (stateless)
+// HTML media elements can't send custom headers, so also check URL parameters as fallback
 $userId = authenticateUserFromHeaders();
+
+// If no user ID from headers (e.g., HTML media element request), try URL parameters
+if (!$userId) {
+    $userId = $_GET['user_id'] ?? null;
+    $userEmail = $_GET['user_email'] ?? null;
+    
+    if ($userId && $userEmail) {
+        // Verify the user ID and email match
+        $db = getDB();
+        $stmt = $db->prepare("SELECT id FROM users WHERE id = ? AND email = ? LIMIT 1");
+        $stmt->execute([(int)$userId, $userEmail]);
+        $row = $stmt->fetch();
+        $userId = $row ? (int)$userId : null;
+    }
+}
 
 // Verify user owns this file
 if (!$userId || $userId !== $fileOwnerId) {
@@ -48,7 +73,7 @@ if (!$userId || $userId !== $fileOwnerId) {
 // Verify file exists in database
 $db = getDB();
 $relativePath = 'uploads/media/' . $file;
-$stmt = $db->prepare("SELECT id, type FROM bookmarks WHERE user_id = ? AND content = ? OR url = ?");
+$stmt = $db->prepare("SELECT id, type FROM bookmarks WHERE user_id = ? AND (content = ? OR url = ?)");
 $stmt->execute([$userId, $relativePath, $relativePath]);
 if (!$stmt->fetch()) {
     http_response_code(404);

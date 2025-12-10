@@ -7,10 +7,6 @@ define('DB_PASS', getenv('DB_PASS') ?: '');
 
 // Security configuration
 define('ALLOWED_ORIGINS', ['http://169.239.251.102:341', 'http://localhost', 'http://127.0.0.1']);
-define('MAX_FILE_SIZE', 50 * 1024 * 1024); // 50MB
-define('UPLOAD_DIR', dirname(__DIR__) . '/uploads/media/');
-define('ALLOWED_MEDIA_TYPES', ['audio/mpeg', 'audio/wav', 'audio/webm', 'video/mp4', 'video/webm', 'video/quicktime']);
-define('ALLOWED_MEDIA_EXTENSIONS', ['mp3', 'wav', 'webm', 'mp4', 'mov', 'avi', 'm4a', 'flac']);
 define('CSRF_TOKEN_LENGTH', 32);
 
 // Set secure headers
@@ -99,70 +95,5 @@ function jsonSuccess($data = null, $message = null) {
     if ($message) $response['message'] = $message;
     if ($data !== null) $response['data'] = $data;
     jsonResponse($response);
-}
-
-// Sanitize file upload name
-function sanitizeFileName($filename) {
-    $filename = basename($filename);
-    $filename = preg_replace('/[^a-zA-Z0-9._-]/', '', $filename);
-    $ext = pathinfo($filename, PATHINFO_EXTENSION);
-    return time() . '_' . substr(md5(uniqid()), 0, 8) . '.' . $ext;
-}
-
-// Validate media upload
-function validateMediaUpload($file, $type) {
-    if (!isset($file['tmp_name']) || !isset($file['type']) || !isset($file['size'])) {
-        return ['valid' => false, 'error' => 'Invalid file upload'];
-    }
-    
-    if ($file['size'] > MAX_FILE_SIZE) {
-        return ['valid' => false, 'error' => 'File too large (max ' . (MAX_FILE_SIZE / 1024 / 1024) . 'MB)'];
-    }
-    
-    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-    if (!in_array($ext, ALLOWED_MEDIA_EXTENSIONS)) {
-        return ['valid' => false, 'error' => 'File type not allowed'];
-    }
-    
-    $finfo = finfo_open(FILEINFO_MIME_TYPE);
-    $mime = finfo_file($finfo, $file['tmp_name']);
-    finfo_close($finfo);
-    
-    if (!in_array($mime, ALLOWED_MEDIA_TYPES)) {
-        return ['valid' => false, 'error' => 'Invalid file MIME type'];
-    }
-    
-    if ($type === 'audio' && strpos($mime, 'audio') === false) {
-        return ['valid' => false, 'error' => 'File is not audio'];
-    }
-    if ($type === 'video' && strpos($mime, 'video') === false) {
-        return ['valid' => false, 'error' => 'File is not video'];
-    }
-    
-    return ['valid' => true];
-}
-
-// Handle media file upload
-function uploadMediaFile($file, $userId, $type) {
-    $validation = validateMediaUpload($file, $type);
-    if (!$validation['valid']) {
-        return $validation;
-    }
-    
-    if (!is_dir(UPLOAD_DIR)) {
-        if (!mkdir(UPLOAD_DIR, 0755, true)) {
-            return ['valid' => false, 'error' => 'Failed to create upload directory'];
-        }
-    }
-    
-    $filename = sanitizeFileName($file['name']);
-    $filepath = UPLOAD_DIR . $userId . '_' . $filename;
-    $relativePath = 'uploads/media/' . $userId . '_' . $filename;
-    
-    if (!move_uploaded_file($file['tmp_name'], $filepath)) {
-        return ['valid' => false, 'error' => 'Failed to save file'];
-    }
-    
-    return ['valid' => true, 'path' => $relativePath, 'url' => basename($relativePath)];
 }
 

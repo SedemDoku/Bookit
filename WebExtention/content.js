@@ -276,12 +276,8 @@ function typeLabel(type) {
   switch (type) {
     case "image":
       return "Image";
-    case "audio":
-      return "Audio";
     case "text":
       return "Text";
-    case "video":
-      return "Video";
     default:
       return "Link";
   }

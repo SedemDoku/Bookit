@@ -13,14 +13,7 @@ browser.runtime.onInstalled.addListener(() => {
     contexts: ["image"]
   });
 
-  // 3. Audio
-  browser.contextMenus.create({
-    id: "save-audio",
-    title: "Save this audio",
-    contexts: ["audio"]
-  });
-
-  // 4. Page (Generic)
+  // 3. Page (Generic)
   browser.contextMenus.create({
     id: "save-page",
     title: "Save this page",
@@ -29,7 +22,7 @@ browser.runtime.onInstalled.addListener(() => {
 });
 
 browser.contextMenus.onClicked.addListener((info, tab) => {
-  let type = "page";
+  let type = "link";
   let content = tab.url; // Default to page URL
 
   // Determine what was clicked and extract the correct data
@@ -39,9 +32,6 @@ browser.contextMenus.onClicked.addListener((info, tab) => {
   } else if (info.menuItemId === "save-image") {
     type = "image";
     content = info.srcUrl; // The source URL of the image
-  } else if (info.menuItemId === "save-audio") {
-    type = "audio";
-    content = info.srcUrl; // The source URL of the audio file
   }
 
   // Ask content script in the page to open the metadata modal
@@ -123,15 +113,13 @@ async function saveItem(newItem) {
     
     if (!data.success) {
       console.error('Failed to save bookmark:', data.error);
-      // Fallback to local storage if API fails
-      return fallbackSave(newItem);
+      throw new Error(data.error || 'Failed to save bookmark');
     }
     console.log('Bookmark saved successfully');
     return data;
   } catch (error) {
     console.error('Error saving bookmark:', error);
-    // Fallback to local storage
-    return fallbackSave(newItem);
+    throw error;
   }
 }
 

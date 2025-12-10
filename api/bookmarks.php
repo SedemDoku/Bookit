@@ -127,15 +127,6 @@ function handleCreateBookmark($db, $userId) {
         $collectionId = $_POST['collection_id'] ?? null;
         $tags = isset($_POST['tags']) ? (is_array($_POST['tags']) ? $_POST['tags'] : explode(',', $_POST['tags'])) : [];
         $favorite = isset($_POST['favorite']) ? (bool)$_POST['favorite'] : false;
-        
-        // Handle media file upload
-        if (($type === 'audio' || $type === 'video') && isset($_FILES['media_file'])) {
-            $upload = uploadMediaFile($_FILES['media_file'], $userId, $type);
-            if (!$upload['valid']) {
-                jsonError($upload['error']);
-            }
-            $content = $upload['path']; // Store server path instead of content
-        }
     } else {
         // JSON request
         $data = json_decode(file_get_contents('php://input'), true);
@@ -152,10 +143,10 @@ function handleCreateBookmark($db, $userId) {
     if (empty($title)) {
         jsonError('Title is required');
     }
-    
-    // Validate type
-    if (!in_array($type, ['link', 'text', 'image', 'audio', 'video'])) {
-        jsonError('Invalid bookmark type');
+
+    // Validate type - link, text, and image allowed
+    if (!in_array($type, ['link', 'text', 'image'])) {
+        jsonError('Invalid bookmark type. Only link, text, and image bookmarks are allowed.');
     }
     
     // Validate collection belongs to user
