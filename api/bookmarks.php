@@ -144,9 +144,9 @@ function handleCreateBookmark($db, $userId) {
         jsonError('Title is required');
     }
 
-    // Validate type - link, text, and image allowed
-    if (!in_array($type, ['link', 'text', 'image'])) {
-        jsonError('Invalid bookmark type. Only link, text, and image bookmarks are allowed.');
+    // Validate type - link, text, image, and video allowed
+    if (!in_array($type, ['link', 'text', 'image', 'video'])) {
+        jsonError('Invalid bookmark type. Only link, text, image, and video bookmarks are allowed.');
     }
     
     // Validate collection belongs to user

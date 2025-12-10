@@ -94,6 +94,9 @@ function onSubmit(e) {
   e.preventDefault();
   const form = e.target;
   const collectionValue = form.collection.value;
+  const urlValue = form.url.value || form.content.value || "";
+  const rawTitle = form.querySelector('[name="title"]')?.value?.trim() || "";
+  const finalTitle = rawTitle || deriveTitleFromUrl(urlValue);
   
   // Find the collection ID
   let collectionId = null;
@@ -105,7 +108,7 @@ function onSubmit(e) {
   }
   
   const payload = {
-    title: form.title.value || "Untitled",
+    title: finalTitle,
     description: form.description.value,
     collection_id: collectionId,
     tags: form.tags.value
@@ -141,9 +144,29 @@ function onSubmit(e) {
   );
 }
 
+function deriveTitleFromUrl(urlValue) {
+  if (!urlValue) return "Untitled";
+  try {
+    const parsed = new URL(urlValue);
+    if (parsed.hostname) return parsed.hostname;
+    return urlValue;
+  } catch (_err) {
+    return urlValue || "Untitled";
+  }
+}
+
 function modalTemplate(data) {
   const tagValue = (data.tags || []).join(", ");
   const urlValue = data.url || data.content || "";
+  let titleValue = data.title || "";
+  if (!titleValue && urlValue) {
+    try {
+      const parsed = new URL(urlValue);
+      titleValue = parsed.hostname;
+    } catch (_err) {
+      titleValue = urlValue;
+    }
+  }
   return `
   <style>
     #bookmark-overlay {
@@ -230,7 +253,7 @@ function modalTemplate(data) {
       <div class="bm-field">
         <label class="bm-label">Title</label>
         <input class="bm-input" name="title" value="${escapeHTML(
-          data.title || ""
+          titleValue || ""
         )}" required />
       </div>
       <div class="bm-field">

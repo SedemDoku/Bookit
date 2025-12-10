@@ -239,6 +239,29 @@ async function deleteBookmark(id) {
   }
 }
 
+// YouTube URL detection and ID extraction
+function isYouTubeURL(url) {
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/v\/([a-zA-Z0-9_-]{11})/
+  ];
+  return patterns.some(pattern => pattern.test(url));
+}
+
+function extractYouTubeID(url) {
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/v\/([a-zA-Z0-9_-]{11})/
+  ];
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return match[1];
+  }
+  return null;
+}
+
 function renderContent(item) {
   let icon = '🔗';
   let contentHtml = '';
@@ -247,6 +270,24 @@ function renderContent(item) {
     icon = '📄';
     const snippet = item.content ? `"${escapeHTML(item.content.slice(0, 140))}${item.content.length > 140 ? '…' : ''}"` : '';
     contentHtml = snippet;
+  } else if (item.type === 'video') {
+    icon = '🎥';
+    const videoId = extractYouTubeID(item.content);
+    if (videoId) {
+      contentHtml = `
+        <div style="position:relative; padding-bottom:56.25%; height:0; border-radius:8px; overflow:hidden; margin:8px 0;">
+          <iframe 
+            style="position:absolute; top:0; left:0; width:100%; height:100%; border:none;"
+            src="https://www.youtube.com/embed/${videoId}" 
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+            allowfullscreen>
+          </iframe>
+        </div>
+        <div><a class="link" href="${escapeHTML(item.content)}" target="_blank">Watch on YouTube</a></div>
+      `;
+    } else {
+      contentHtml = `<a class="link" href="${escapeHTML(item.content)}" target="_blank">${escapeHTML(item.content)}</a>`;
+    }
   } else if (item.type === 'image') {
     icon = '🖼️';
     contentHtml = `
@@ -266,6 +307,7 @@ function renderTags(tags = []) {
 
 function typeLabel(type) {
   switch (type) {
+    case 'video': return 'Video';
     case 'image': return 'Image';
     case 'text': return 'Text';
     default: return 'Link';

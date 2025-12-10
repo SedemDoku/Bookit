@@ -172,8 +172,11 @@ async function loadBookmarks() {
     });
     const data = await response.json();
     
+    console.log('Loaded bookmarks from API:', data);
+    
     if (data.success) {
       state.bookmarks = data.data;
+      console.log('First bookmark in state:', state.bookmarks[0]);
     } else {
       // Handle authentication errors
       if (response.status === 401 || data.error?.includes('Authentication')) {
@@ -340,18 +343,39 @@ function wireEvents() {
   document.getElementById('bookmark-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
+    const url = formData.get('url') || '';
+    const type = formData.get('type');
+    const contentValue = formData.get('content') || '';
+    
     const bookmark = {
       title: formData.get('title'),
-      url: formData.get('url') || '',
-      type: formData.get('type'),
-      content: formData.get('content') || formData.get('url') || '',
+      url: url,
+      type: type,
+      content: type === 'video' || type === 'image' ? (url || contentValue) : contentValue,
+      description: contentValue,
       collection_id: formData.get('collection_id') || null,
       tags: [],
       favorite: false
     };
     
+    console.log('Creating bookmark:', bookmark);
+    
     await createBookmark(bookmark);
     closeBookmarkModal();
+  });
+
+  // Auto-detect YouTube URLs and set type to video
+  document.getElementById('bookmark-url')?.addEventListener('input', (e) => {
+    const url = e.target.value;
+    const typeSelect = document.getElementById('bookmark-type');
+    const contentField = document.getElementById('bookmark-content');
+    
+    if (isYouTubeURL(url)) {
+      typeSelect.value = 'video';
+      if (!contentField.value) {
+        contentField.value = url;
+      }
+    }
   });
 
   document.getElementById('collection-form')?.addEventListener('submit', async (e) => {
@@ -407,12 +431,16 @@ function render() {
 
     const media = renderMediaPreview(item);
     const tags = renderTags(item.tags || []);
+    
+    // Debug logging
+    console.log('Rendering bookmark:', { id: item.id, title: item.title, description: item.description, content: item.content });
 
     card.innerHTML = `
       <div class="media-preview">${media}</div>
       <div class="card-body">
-        <h3 title="${escapeHTML(item.title)}">${escapeHTML(item.title)}</h3>
+        <h3 title="${escapeHTML(item.title || 'Untitled')}">${escapeHTML(item.title || 'Untitled')}</h3>
         <p class="type-tag">${typeLabel(item.type)}</p>
+        ${item.description ? `<p class="card-description">${escapeHTML(item.description)}</p>` : ''}
         ${tags}
         <div class="card-footer">
           <a href="${item.url || item.content || "#"}" class="view-link" target="_blank">
@@ -444,7 +472,46 @@ function render() {
   renderTagFilter();
 }
 
+// YouTube URL detection and ID extraction
+function isYouTubeURL(url) {
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/v\/([a-zA-Z0-9_-]{11})/
+  ];
+  return patterns.some(pattern => pattern.test(url));
+}
+
+function extractYouTubeID(url) {
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/v\/([a-zA-Z0-9_-]{11})/
+  ];
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return match[1];
+  }
+  return null;
+}
+
 function renderMediaPreview(item) {
+  if (item.type === "video") {
+    const videoId = extractYouTubeID(item.content);
+    if (videoId) {
+      return `<div class="video-preview">
+        <iframe 
+          width="100%" 
+          height="200" 
+          src="https://www.youtube.com/embed/${videoId}" 
+          frameborder="0" 
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+          allowfullscreen>
+        </iframe>
+      </div>`;
+    }
+    return `<span class="link-icon">🎥</span>`;
+  }
   if (item.type === "image") {
     return `<img src="${escapeHTML(item.content)}" alt="${escapeHTML(item.title)}" class="preview-img">`;
   }
@@ -485,6 +552,8 @@ function renderTagFilter() {
 
 function typeLabel(type) {
   switch (type) {
+    case "video":
+      return "Video";
     case "image":
       return "Image";
     case "text":
@@ -596,6 +665,7 @@ function closeCollectionModal() {
 
 async function createBookmark(bookmark) {
   try {
+    console.log('Sending bookmark to API:', bookmark);
     const response = await fetch(`${API_BASE}/bookmarks.php`, {
       method: 'POST',
       headers: {
@@ -607,10 +677,12 @@ async function createBookmark(bookmark) {
       body: JSON.stringify(bookmark)
     });
     const data = await response.json();
+    console.log('API Response:', data);
     if (data.success) {
       await loadBookmarks();
       render();
     } else {
+      console.error('Create bookmark failed:', data.error);
       alert(data.error || 'Failed to create bookmark');
     }
   } catch (error) {

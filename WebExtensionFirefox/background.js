@@ -13,7 +13,15 @@ browser.runtime.onInstalled.addListener(() => {
     contexts: ["image"]
   });
 
-  // 3. Page (Generic)
+  // 3. YouTube Video
+  browser.contextMenus.create({
+    id: "save-video",
+    title: "Save this video",
+    contexts: ["page"],
+    documentUrlPatterns: ["*://*.youtube.com/*", "*://*.youtu.be/*"]
+  });
+
+  // 4. Page (Generic)
   browser.contextMenus.create({
     id: "save-page",
     title: "Save this page",
@@ -32,6 +40,9 @@ browser.contextMenus.onClicked.addListener((info, tab) => {
   } else if (info.menuItemId === "save-image") {
     type = "image";
     content = info.srcUrl; // The source URL of the image
+  } else if (info.menuItemId === "save-video") {
+    type = "video";
+    content = tab.url; // YouTube video URL
   }
 
   // Ask content script in the page to open the metadata modal
@@ -83,7 +94,7 @@ async function saveItem(newItem) {
   }
   
   const bookmarkData = {
-    title: newItem.title || "Untitled",
+    title: (newItem.title && newItem.title.trim()) || fallbackTitle(newItem),
     url: newItem.url || "",
     type: newItem.type || "link",
     content: newItem.content || newItem.url || "",
@@ -134,4 +145,17 @@ async function fallbackSave(newItem) {
       browser.storage.local.set({ bookmarks: bookmarks }, resolve);
     });
   });
+}
+
+function fallbackTitle(newItem) {
+  const url = newItem.url || newItem.content || "";
+  if (url) {
+    try {
+      const parsed = new URL(url);
+      return parsed.hostname || "Untitled";
+    } catch (_err) {
+      return url || "Untitled";
+    }
+  }
+  return "Untitled";
 }
