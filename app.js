@@ -9,6 +9,7 @@ function getStoredUser() {
     return null;
   }
 }
+let previewBoxLoaded = false;
 
 function clearStoredUser() {
   localStorage.removeItem(USER_STORAGE_KEY);
@@ -226,7 +227,9 @@ function renderCollections() {
     }
   }
   
-  state.collections.forEach(collection => renderCollection(collection));
+  state.collections
+    .filter(col => !isUnsortedName(col.name))
+    .forEach(collection => renderCollection(collection));
 }
 
 function wireEvents() {
@@ -391,6 +394,7 @@ function wireEvents() {
 
 function render() {
   if (!bookmarkGrid) return;
+  ensurePreviewBoxLoaded();
   
   bookmarkGrid.innerHTML = "";
   
@@ -435,6 +439,16 @@ function render() {
     // Debug logging
     console.log('Rendering bookmark:', { id: item.id, title: item.title, description: item.description, content: item.content });
 
+    const isTextBookmark = item.type === 'text';
+    const isMediaBookmark = item.type === 'image' || item.type === 'video';
+    const viewHref = (isTextBookmark || isMediaBookmark) ? '#' : (item.url || item.content || "#");
+    const viewClass = isTextBookmark
+      ? 'view-link view-link-text'
+      : isMediaBookmark
+      ? 'view-link view-link-media'
+      : 'view-link';
+    const viewTarget = (isTextBookmark || isMediaBookmark) ? '' : 'target="_blank"';
+
     card.innerHTML = `
       <div class="media-preview">${media}</div>
       <div class="card-body">
@@ -443,7 +457,7 @@ function render() {
         ${item.description ? `<p class="card-description">${escapeHTML(item.description)}</p>` : ''}
         ${tags}
         <div class="card-footer">
-          <a href="${item.url || item.content || "#"}" class="view-link" target="_blank">
+            <a href="${viewHref}" class="${viewClass}" ${viewTarget} data-id="${item.id}">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
               <polyline points="15 3 21 3 21 9"></polyline>
@@ -451,6 +465,7 @@ function render() {
             </svg>
             Open
           </a>
+          <a href="#" class="move-collection" data-id="${item.id}" data-collection-id="${item.collection_id || ''}">Change collection</a>
           <button class="delete-bookmark" data-id="${item.id}">Delete</button>
         </div>
       </div>
@@ -466,6 +481,37 @@ function render() {
         await loadBookmarks();
         render();
       }
+    });
+  });
+
+  // Add move-to-collection handlers
+  document.querySelectorAll('.move-collection').forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      const id = e.target.dataset.id;
+      const currentCollectionId = e.target.dataset.collectionId || null;
+      const bookmark = state.bookmarks.find(b => String(b.id) === String(id));
+      if (bookmark) openMoveCollectionModal(bookmark, currentCollectionId);
+    });
+  });
+
+  // Text preview modal handlers
+  document.querySelectorAll('.view-link-text').forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      const id = e.currentTarget.dataset.id;
+      const bookmark = state.bookmarks.find(b => String(b.id) === String(id));
+      if (bookmark) openTextPreviewModal(bookmark);
+    });
+  });
+
+  // Media (image/video) preview handlers
+  document.querySelectorAll('.view-link-media').forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      const id = e.currentTarget.dataset.id;
+      const bookmark = state.bookmarks.find(b => String(b.id) === String(id));
+      if (bookmark) openMediaPreviewModal(bookmark);
     });
   });
 
@@ -519,7 +565,10 @@ function renderMediaPreview(item) {
     const snippet = item.content || item.description || "Text snippet";
     return `<p>${escapeHTML(snippet.slice(0, 120))}${snippet.length > 120 ? "..." : ""}</p>`;
   }
-  return `<span class="link-icon">🔗</span>`;
+  const href = item.url || item.content || '';
+  if (!href) return `<span class="link-icon">🔗</span>`;
+  const pbStyle = '--pb-background-color: #595959; --pb-background-color-hover: #4a4a4a; --pb-text-color: white; --pb-text-color-light: #ffffff;';
+  return `<previewbox-article style="${pbStyle}" href="${escapeAttribute(href)}"></previewbox-article>`;
 }
 
 function renderTags(tags = []) {
@@ -563,10 +612,194 @@ function typeLabel(type) {
   }
 }
 
+function isUnsortedName(name = '') {
+  return name.trim().toLowerCase() === 'unsorted';
+}
+
+function flattenCollections(list = [], prefix = '') {
+  let result = [];
+  list.forEach(col => {
+    if (isUnsortedName(col.name)) return;
+    result.push({ id: col.id, name: `${prefix}${col.name}` });
+    if (col.children && col.children.length) {
+      result = result.concat(flattenCollections(col.children, `${prefix}${col.name} / `));
+    }
+  });
+  return result;
+}
+
+function openMoveCollectionModal(bookmark, currentCollectionId) {
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  const collections = flattenCollections(state.collections);
+  const options = ['<option value="">Unsorted</option>', ...collections.map(c => `<option value="${c.id}" ${String(c.id) === String(currentCollectionId || '') ? 'selected' : ''}>${escapeHTML(c.name)}</option>`)].join('');
+  modal.innerHTML = `
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Move Bookmark</h2>
+        <button type="button" class="modal-close" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-form">
+        <div class="form-field">
+          <label class="form-label" for="move-collection">Select collection</label>
+          <select class="form-input" id="move-collection">${options}</select>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" id="move-cancel">Cancel</button>
+          <button type="button" class="btn-primary" id="move-save">Save</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const close = () => modal.remove();
+  modal.querySelector('.modal-overlay').addEventListener('click', close);
+  modal.querySelector('.modal-close').addEventListener('click', close);
+  modal.querySelector('#move-cancel').addEventListener('click', close);
+  modal.querySelector('#move-save').addEventListener('click', async () => {
+    const select = modal.querySelector('#move-collection');
+    const newCollectionId = select.value || null;
+    await updateBookmarkCollection(bookmark.id, newCollectionId);
+    close();
+  });
+
+  document.body.appendChild(modal);
+}
+
+function openTextPreviewModal(bookmark) {
+  const modal = document.createElement('div');
+  modal.className = 'modal text-preview-modal';
+  const linkTarget = bookmark.url || bookmark.content || '';
+
+  modal.innerHTML = `
+    <div class="modal-overlay"></div>
+    <div class="modal-content text-preview-content">
+      <div class="modal-header">
+        <span aria-hidden="true"></span>
+        <button type="button" class="modal-close" aria-label="Close">&times;</button>
+      </div>
+      <div class="text-preview-body">
+        <div class="text-preview-full">${escapeHTML(bookmark.content || '')}</div>
+        <div class="text-preview-actions">
+          ${linkTarget ? `<a class="btn-link" href="${escapeHTML(linkTarget)}" target="_blank" rel="noopener">Open link</a>` : '<span class="no-link">No link available</span>'}
+        </div>
+      </div>
+    </div>
+  `;
+
+  const close = () => modal.remove();
+  modal.querySelector('.modal-overlay').addEventListener('click', close);
+  modal.querySelector('.modal-close').addEventListener('click', close);
+  modal.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+
+  document.body.appendChild(modal);
+  modal.focus?.();
+}
+
+function openMediaPreviewModal(bookmark) {
+  const modal = document.createElement('div');
+  modal.className = 'modal media-preview-modal';
+  const linkTarget = bookmark.url || bookmark.content || '';
+  const isVideo = bookmark.type === 'video';
+  const isImage = bookmark.type === 'image';
+
+  let mediaHtml = '';
+  if (isVideo) {
+    const videoId = extractYouTubeID(linkTarget);
+    if (videoId) {
+      mediaHtml = `
+        <div class="media-preview-embed video-embed">
+          <iframe
+            src="https://www.youtube.com/embed/${videoId}"
+            title="Video preview"
+            frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen></iframe>
+        </div>`;
+    } else if (linkTarget) {
+      mediaHtml = `<video class="media-preview-embed" src="${escapeHTML(linkTarget)}" controls preload="metadata"></video>`;
+    }
+  } else if (isImage && linkTarget) {
+    mediaHtml = `<img class="media-preview-embed" src="${escapeHTML(linkTarget)}" alt="Image preview">`;
+  }
+
+  modal.innerHTML = `
+    <div class="modal-overlay"></div>
+    <div class="modal-content media-preview-content">
+      <div class="modal-header">
+        <span aria-hidden="true"></span>
+        <button type="button" class="modal-close" aria-label="Close">&times;</button>
+      </div>
+      <div class="media-preview-body">
+        ${mediaHtml || '<div class="no-link">No preview available</div>'}
+        <div class="media-preview-actions">
+          ${linkTarget ? `<a class="btn-link" href="${escapeHTML(linkTarget)}" target="_blank" rel="noopener">Open link</a>` : '<span class="no-link">No link available</span>'}
+        </div>
+      </div>
+    </div>
+  `;
+
+  const close = () => modal.remove();
+  modal.querySelector('.modal-overlay').addEventListener('click', close);
+  modal.querySelector('.modal-close').addEventListener('click', close);
+  modal.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+
+  document.body.appendChild(modal);
+  modal.focus?.();
+}
+
+async function updateBookmarkCollection(bookmarkId, collectionId) {
+  try {
+    const response = await fetch(`${API_BASE}/bookmarks.php?id=${bookmarkId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-User-ID': currentUser.user_id,
+        'X-User-Email': currentUser.email
+      },
+      body: JSON.stringify({ collection_id: collectionId })
+    });
+    const data = await response.json();
+    if (data.success) {
+      await loadBookmarks();
+      render();
+    } else {
+      alert(data.error || 'Failed to move bookmark');
+    }
+  } catch (err) {
+    console.error('Failed to move bookmark', err);
+    alert('Failed to move bookmark');
+  }
+}
+
+function ensurePreviewBoxLoaded() {
+  if (previewBoxLoaded) return;
+  if (document.querySelector('script[data-previewbox]')) {
+    previewBoxLoaded = true;
+    return;
+  }
+  const script = document.createElement('script');
+  // Use CDN build of PreviewBox (non-module)
+  script.src = 'https://cdn.jsdelivr.net/npm/@mariusbongarts/previewbox/dist/index.min.js';
+  script.dataset.previewbox = 'true';
+  script.onload = () => { previewBoxLoaded = true; };
+  script.onerror = () => { console.warn('PreviewBox failed to load'); };
+  document.head.appendChild(script);
+}
+
 function escapeHTML(str = '') {
   const div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
+}
+
+function escapeAttribute(str = '') {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
 
 async function createCollection(name, parentId = null) {
@@ -618,7 +851,7 @@ function openBookmarkModal() {
   
   // Populate collection options
   collectionSelect.innerHTML = '<option value="">Unsorted</option>';
-  state.collections.forEach(collection => {
+  state.collections.filter(col => !isUnsortedName(col.name)).forEach(collection => {
     const option = document.createElement('option');
     option.value = collection.id;
     option.textContent = collection.name;
@@ -646,7 +879,7 @@ function openCollectionModal() {
   
   // Populate parent collection options
   parentSelect.innerHTML = '<option value="">None</option>';
-  state.collections.forEach(collection => {
+  state.collections.filter(col => !isUnsortedName(col.name)).forEach(collection => {
     const option = document.createElement('option');
     option.value = collection.id;
     option.textContent = collection.name;

@@ -9,6 +9,7 @@ let API_BASE = DEFAULT_API_BASE;
 document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
+  injectPreviewStyles();
   // Load API URL from storage
   const storage = await chrome.storage.local.get({ apiUrl: DEFAULT_API_BASE });
   API_BASE = storage.apiUrl || DEFAULT_API_BASE;
@@ -168,13 +169,13 @@ async function loadBookmarks() {
         const div = document.createElement('div');
         div.className = 'item';
         
-        const { icon, contentHtml } = renderContent(item);
+        const { contentHtml } = renderContent(item);
         const tagsHtml = renderTags(item.tags || []);
         const favorite = item.favorite ? '⭐' : '';
         
         div.innerHTML = `
           <div class="item-head">
-            <p class="item-title" title="${escapeHTML(item.title)}">${icon} ${escapeHTML(item.title)}</p>
+            <p class="item-title" title="${escapeHTML(item.title)}">${escapeHTML(item.title)}</p>
             <span class="badge">${typeLabel(item.type)}</span>
           </div>
           <div class="item-content">
@@ -261,15 +262,14 @@ function extractYouTubeID(url) {
 }
 
 function renderContent(item) {
-  let icon = '🔗';
   let contentHtml = '';
+  const domain = getDomain(item.url || item.content);
+  const previewText = (item.description || item.content || item.url || '').slice(0, 120);
 
   if (item.type === 'text') {
-    icon = '📝';
     const snippet = item.content ? `"${escapeHTML(item.content.slice(0, 140))}${item.content.length > 140 ? '…' : ''}"` : '';
     contentHtml = snippet;
   } else if (item.type === 'video') {
-    icon = '🎥';
     const videoId = extractYouTubeID(item.content);
     if (videoId) {
       contentHtml = `
@@ -287,15 +287,29 @@ function renderContent(item) {
       contentHtml = `<a class="link" href="${escapeHTML(item.content)}" target="_blank">${escapeHTML(item.content)}</a>`;
     }
   } else if (item.type === 'image') {
-    icon = '🖼️';
     contentHtml = `
       <img src="${escapeHTML(item.content)}" class="media-preview" style="max-width:100%; border-radius:8px;">
       <div style="margin-top:4px;"><a class="link" href="${escapeHTML(item.content)}" target="_blank">View full</a></div>
     `;
   } else {
-    contentHtml = `<a class="link" href="${escapeHTML(item.url)}" target="_blank">${escapeHTML(item.url)}</a>`;
+    contentHtml = `
+      <div class="preview-box">
+        <div class="preview-domain">${escapeHTML(domain || 'Link preview')}</div>
+        ${previewText ? `<div class="preview-text">${escapeHTML(previewText)}${previewText.length === 120 ? '…' : ''}</div>` : ''}
+        <a class="preview-open" href="${escapeHTML(item.url)}" target="_blank">Open</a>
+      </div>
+    `;
   }
-  return { icon, contentHtml };
+    return { contentHtml };
+}
+
+function getDomain(url = '') {
+  if (!url) return '';
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch (_err) {
+    return '';
+  }
 }
 
 function renderTags(tags = []) {
@@ -329,4 +343,39 @@ function escapeHTML(str = '') {
   const div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
+}
+
+function injectPreviewStyles() {
+  if (document.getElementById('previewbox-styles')) return;
+  const style = document.createElement('style');
+  style.id = 'previewbox-styles';
+  style.textContent = `
+    .preview-box {
+      background: #f5f6f8;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 8px 10px;
+      margin-top: 6px;
+    }
+    .preview-domain {
+      font-size: 12px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 4px;
+    }
+    .preview-text {
+      font-size: 12px;
+      color: #4b5563;
+      margin: 0 0 6px;
+      line-height: 1.5;
+    }
+    .preview-open {
+      font-size: 12px;
+      color: #ff6b35;
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .preview-open:hover { text-decoration: underline; }
+  `;
+  document.head.appendChild(style);
 }

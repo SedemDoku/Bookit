@@ -56,12 +56,12 @@ body {
     color: var(--text);
 }
 
-.brand-dot {
-    width: 10px;
-    height: 10px;
-    background: var(--primary);
-    border-radius: 50%;
-    display: block;
+.brand-icon {
+    width: 18px;
+    height: 22px;
+    display: inline-block;
+    vertical-align: middle;
+    color: var(--primary);
 }
 
 .header-actions {
@@ -434,6 +434,10 @@ body {
     max-height: 200px;
 }
 
+.bookmark-card.list-view .card-body {
+    min-width: 0; /* allow text to shrink and wrap instead of disappearing */
+}
+
 .media-preview {
     width: 100%;
     height: 200px;
@@ -491,7 +495,7 @@ body {
 }
 
 .card-body {
-    padding: 16px;
+    padding: 12px;
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -510,6 +514,13 @@ body {
     overflow: hidden;
 }
 
+.bookmark-card.list-view h3 {
+    display: block;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+}
+
 .type-tag {
     display: inline-block;
     background: var(--bg);
@@ -524,6 +535,14 @@ body {
     width: fit-content;
 }
 
+.bookmark-card.list-view .type-tag {
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 6px;
+}
+
 .card-description {
     font-size: 13px;
     color: var(--text-muted);
@@ -534,6 +553,40 @@ body {
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
+}
+
+.preview-box {
+    background: var(--surface-hover);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin: 8px 0;
+    box-shadow: var(--shadow-sm);
+}
+
+.preview-domain {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+}
+
+.preview-text {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: 0 0 8px;
+    line-height: 1.5;
+}
+
+.preview-open {
+    font-size: 12px;
+    color: var(--primary);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.preview-open:hover {
+    text-decoration: underline;
 }
 
 .tag-row {
@@ -555,8 +608,10 @@ body {
 
 .card-footer {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-start;
     margin-top: 12px;
     padding-top: 12px;
     border-top: 1px solid var(--border);
@@ -587,6 +642,23 @@ body {
     font-size: 12px;
     font-weight: 600;
     transition: all 0.2s;
+}
+
+.move-collection {
+    background: transparent;
+    border: none;
+    padding: 4px 0;
+    color: var(--primary);
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 0.15s ease;
+    font-size: 12px;
+    text-decoration: none;
+}
+
+.move-collection:hover {
+    color: var(--primary-hover);
+    text-decoration: underline;
 }
 
 .delete-bookmark:hover {
@@ -741,6 +813,11 @@ body {
     animation: slideIn 0.3s ease-out;
 }
 
+.text-preview-modal .modal-content,
+.media-preview-modal .modal-content {
+    width: min(640px, 95%);
+}
+
 @keyframes slideIn {
     from {
         opacity: 0;
@@ -789,6 +866,78 @@ body {
 
 .modal-form {
     padding: 24px;
+}
+
+
+.text-preview-body,
+.media-preview-body {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    align-items: center;
+}
+
+.text-preview-full {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--text);
+    white-space: pre-wrap;
+    max-height: 60vh;
+    overflow-y: auto;
+.media-preview-embed {
+    width: 100%;
+    border-radius: var(--radius-sm);
+    background: #000;
+    max-height: 70vh;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto;
+}
+
+.media-preview-embed.video-embed {
+    position: relative;
+    padding-bottom: 56.25%;
+    height: 0;
+    overflow: hidden;
+    background: #000;
+}
+
+.media-preview-embed.video-embed iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+.text-preview-actions,
+.media-preview-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.text-preview-actions .btn-link,
+.media-preview-actions .btn-link {
+    color: var(--primary);
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.text-preview-actions .btn-link:hover,
+.media-preview-actions .btn-link:hover {
+    text-decoration: underline;
+}
+
+.text-preview-actions .no-link,
+.media-preview-actions .no-link {
+    color: var(--text-muted);
+    font-size: 13px;
 }
 
 .form-field {

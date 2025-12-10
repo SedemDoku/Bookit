@@ -7,12 +7,16 @@
     <title>My Multi-Media Bookmarks</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="cookies.css">
+    <!-- PreviewBox link previews -->
+    <script src="https://cdn.jsdelivr.net/npm/@mariusbongarts/previewbox/dist/index.min.js"></script>
 </head>
 <body>
 
     <header class="header">
         <div class="brand">
-            <span class="brand-dot"></span>
+                        <svg class="brand-icon" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M6 3h12a1 1 0 0 1 1 1v17l-7-5-7 5V4a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>
+                        </svg>
             <h1>Bookmarks</h1>
         </div>
         <div class="header-actions">
