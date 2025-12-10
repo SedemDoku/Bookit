@@ -394,7 +394,6 @@ function wireEvents() {
 
 function render() {
   if (!bookmarkGrid) return;
-  ensurePreviewBoxLoaded();
   
   bookmarkGrid.innerHTML = "";
   
@@ -555,6 +554,12 @@ function renderMediaPreview(item) {
           allowfullscreen>
         </iframe>
       </div>`;
+    } else if (item.content) {
+      // Non-YouTube video (direct video link)
+      return `<video class="video-preview" width="100%" height="200" controls preload="metadata">
+        <source src="${escapeHTML(item.content)}" type="video/mp4">
+        Your browser does not support the video tag.
+      </video>`;
     }
     return `<span class="link-icon">🎥</span>`;
   }

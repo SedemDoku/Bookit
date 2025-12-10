@@ -15,10 +15,17 @@ chrome.runtime.onInstalled.addListener(() => {
 
   // 3. YouTube Video
   chrome.contextMenus.create({
-    id: "save-video",
-    title: "Save this video",
+    id: "save-youtube-video",
+    title: "Save this YouTube video",
     contexts: ["page"],
     documentUrlPatterns: ["*://*.youtube.com/*", "*://*.youtu.be/*"]
+  });
+
+  // 3b. Generic Video
+  chrome.contextMenus.create({
+    id: "save-video",
+    title: "Save video link",
+    contexts: ["video", "link"]
   });
 
   // 4. Page (Generic)
@@ -40,9 +47,12 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   } else if (info.menuItemId === "save-image") {
     type = "image";
     content = info.srcUrl; // The source URL of the image
-  } else if (info.menuItemId === "save-video") {
+  } else if (info.menuItemId === "save-youtube-video") {
     type = "video";
     content = tab.url; // YouTube video URL
+  } else if (info.menuItemId === "save-video") {
+    type = "video";
+    content = info.srcUrl || info.linkUrl || tab.url; // Direct video or link URL
   }
 
   // Ask content script in the page to open the metadata modal
