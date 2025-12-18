@@ -1,181 +1,318 @@
-# Bookmark Manager - PHP/MySQL Version
+# Bookmark Manager - Full Stack Web Application
 
-A Raindrop.io-inspired bookmark manager with PHP backend and MySQL database, featuring a Chrome extension for quick bookmark saving.
+A Raindrop.io-inspired bookmark manager built with PHP, MySQL, and vanilla JavaScript. Features a complete web application with user authentication, media upload support, and browser extensions for Chrome and Firefox.
 
-## Features
+## 🚀 Features
 
-- ✅ User authentication (signup/login with password validation)
-- ✅ Bookmark management (create, read, update, delete)
-- ✅ Collections/Categories with nested support
-- ✅ Tags system
-- ✅ Search functionality
-- ✅ Multiple bookmark types (link, text, image, audio, video)
-- ✅ Chrome extension for quick saving
-- ✅ Beautiful, modern UI
+### Core Functionality
+- ✅ **User Authentication** - Secure signup/login with password validation and session management
+- ✅ **Bookmark Management** - Full CRUD operations for bookmarks
+- ✅ **Collections/Categories** - Nested collection support with hierarchical organization
+- ✅ **Tags System** - Tag-based bookmark organization
+- ✅ **Search & Filter** - Advanced search functionality across bookmarks
+- ✅ **Media Support** - Upload and manage audio/video files with secure serving
+- ✅ **Multiple Bookmark Types** - Link, text, image, audio, and video bookmarks
 
-## Setup Instructions
+### Browser Extensions
+- ✅ **Chrome Extension** - Quick bookmark saving via context menu
+- ✅ **Firefox Extension** - Full Firefox support with WebExtensions API
+- ✅ **Extension Features** - Login, view bookmarks, delete, and save from any webpage
+
+### Security Features
+- ✅ **CORS Protection** - Whitelist-based origin control
+- ✅ **CSRF Protection** - Token-based request validation
+- ✅ **SQL Injection Prevention** - Prepared statements throughout
+- ✅ **Security Headers** - CSP, X-Frame-Options, XSS protection
+- ✅ **Input Validation** - Comprehensive sanitization and validation
+- ✅ **User Isolation** - Strict database-level user data separation
+- ✅ **Secure Media Serving** - Validated file access via dedicated API endpoint
+
+## 📋 Prerequisites
+
+- PHP 7.4 or higher
+- MySQL 5.7 or higher / MariaDB 10.2+
+- Apache or PHP built-in server
+- Chrome or Firefox browser (for extensions)
+
+## 🛠️ Setup Instructions
 
 ### 1. Database Setup
 
-1. Open phpMyAdmin (or your MySQL client)
-2. Create a new database or use the existing one
-3. Import the `database.sql` file:
-   - Click on "Import" tab in phpMyAdmin
-   - Choose file: `database.sql`
-   - Click "Go"
-
-Alternatively, you can copy and paste the SQL from `database.sql` into the SQL tab and execute it.
+1. Open phpMyAdmin or your MySQL client
+2. Create a new database named `bookmark_db`
+3. Import the database schema:
+   ```bash
+   mysql -u your_username -p bookmark_db < database.sql
+   ```
+   Or use phpMyAdmin's Import feature with `database.sql`
 
 ### 2. PHP Configuration
 
-**For School Server (Already Configured):**
-- Database: `bookmark_db`
-- Username: `sedem.doku`
-- Password: `Nana Yaa`
-- Host: `localhost`
-
-The configuration is already set in `config.php`. If you need to change it, edit:
+Edit `config.php` with your database credentials:
 
 ```php
 define('DB_HOST', 'localhost');
 define('DB_NAME', 'bookmark_db');
-define('DB_USER', 'sedem.doku');
-define('DB_PASS', 'Nana Yaa');
+define('DB_USER', 'your_username');
+define('DB_PASS', 'your_password');
 ```
 
-**For Local Development:**
-If running locally, update `config.php` with your local MySQL credentials.
-
-Make sure PHP sessions are enabled (usually enabled by default)
+**Environment Variables (Optional):**
+The application supports environment variables for enhanced security:
+- `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS`
 
 ### 3. Web Server Setup
 
-#### Option A: Using XAMPP/WAMP/MAMP
+#### Option A: XAMPP/WAMP/MAMP
 
-1. Copy the entire project folder to your web server directory:
-   - XAMPP: `C:\xampp\htdocs\bookmark_manager\`
-   - WAMP: `C:\wamp64\www\bookmark_manager\`
-   - MAMP: `/Applications/MAMP/htdocs/bookmark_manager/`
+1. Copy project to web server directory:
+   - XAMPP: `C:\xampp\htdocs\Personal_Web_Tech_Project\`
+   - WAMP: `C:\wamp64\www\Personal_Web_Tech_Project\`
+   - MAMP: `/Applications/MAMP/htdocs/Personal_Web_Tech_Project/`
 
 2. Start Apache and MySQL services
 
-3. Access the application at: `http://localhost/bookmark_manager/`
+3. Access at: `http://localhost/Personal_Web_Tech_Project/`
 
-#### Option B: Using PHP Built-in Server
+#### Option B: PHP Built-in Server
 
-1. Open terminal/command prompt in the project directory
-2. Run: `php -S localhost:8000`
-3. Access at: `http://localhost:8000`
+```bash
+cd c:\xampp\htdocs\Personal_Web_Tech_Project
+php -S localhost:8000
+```
 
-### 4. Chrome Extension Setup
+Access at: `http://localhost:8000`
 
-1. Open Chrome and go to `chrome://extensions/`
-2. Enable "Developer mode" (toggle in top right)
+### 4. Browser Extension Setup
+
+#### Chrome Extension
+
+1. Open Chrome → `chrome://extensions/`
+2. Enable "Developer mode"
 3. Click "Load unpacked"
-4. Select the `WebExtention` folder
-5. The extension icon should appear in your toolbar
+4. Select the `WebExtention/` folder
+5. Configure API URL in `popup.js` if needed
 
-**School Server Configuration:**
-- Server URL: `http://169.239.251.102:341/~sedem.doku/`
-- API URL: `http://169.239.251.102:341/~sedem.doku/api`
+#### Firefox Extension
 
-The extension files are already configured with your school server URL. See `CONFIGURATION.md` for details.
+1. Open Firefox → `about:debugging#/runtime/this-firefox`
+2. Click "Load Temporary Add-on"
+3. Select `manifest.json` from `WebExtensionFirefox/` folder
+4. Configure API URL in `popup.js` if needed
 
-### 5. First Use
+### 5. Media Upload Configuration
+
+Create the uploads directory with proper permissions:
+
+```bash
+mkdir uploads/media
+chmod 755 uploads/media
+```
+
+### 6. First Use
 
 1. Navigate to `login.html` or `signup.html`
-2. Create a new account (password must be at least 8 characters with special characters)
-3. After login, you'll be redirected to `index.php`
-4. Start adding bookmarks!
+2. Create an account (password requirements: 8+ chars, must include special character)
+3. Log in and start managing bookmarks!
 
-## File Structure
+## 📁 Project Structure
 
 ```
-bookmark_manager/
+Personal_Web_Tech_Project/
 ├── api/
-│   ├── auth.php          # Authentication endpoints
-│   ├── bookmarks.php     # Bookmark CRUD operations
-│   └── collections.php   # Collection management
-├── WebExtention/
-│   ├── background.js    # Extension background script
-│   ├── content.js       # Content script for modal
-│   ├── popup.html/js    # Extension popup UI
-│   └── manifest.json   # Extension manifest
-├── config.php           # Database configuration
-├── index.php            # Main application page
-├── login.html           # Login page
-├── signup.html          # Signup page
-├── auth.js              # Authentication frontend logic
-├── app.js               # Main application JavaScript
-├── style.css            # Main stylesheet
-├── auth.css             # Authentication page styles
-└── database.sql         # Database schema
-
+│   ├── auth.php           # Authentication endpoints (signup, login, logout)
+│   ├── bookmarks.php      # Bookmark CRUD + media upload
+│   ├── collections.php    # Collection management
+│   └── media.php          # Secure media file serving
+├── WebExtention/          # Chrome extension
+│   ├── background.js      # Background service worker
+│   ├── content.js         # Content script
+│   ├── popup.html         # Extension popup UI
+│   ├── popup.js           # Popup logic
+│   ├── manifest.json      # Chrome extension manifest
+│   └── README.md          # Extension documentation
+├── WebExtensionFirefox/   # Firefox extension
+│   ├── background.js      # Firefox background script
+│   ├── content.js         # Content script
+│   ├── popup.html         # Extension popup UI
+│   ├── popup.js           # Popup logic
+│   └── manifest.json      # Firefox extension manifest
+├── uploads/media/         # User-uploaded media files
+├── index.php              # Main application (requires login)
+├── login.html             # Login page
+├── signup.html            # Signup page
+├── index.html             # Redirect to index.php
+├── app.js                 # Main application JavaScript
+├── auth.js                # Authentication JavaScript
+├── cookies.js             # Cookie consent handling
+├── style.css              # Main application styles
+├── auth.css               # Authentication page styles
+├── cookies.css            # Cookie banner styles
+├── config.php             # Database config + security functions
+├── database.sql           # Database schema
+├── setup_database.php     # Database setup helper
+├── README.md              # This file
+├── QUICK_START.md         # Implementation reference
+├── CONFIGURATION.md       # Configuration guide
+└── COMPREHENSIVE_DOCUMENTATION.md  # Detailed documentation
 ```
 
-## API Endpoints
+## 🔌 API Endpoints
 
 ### Authentication (`api/auth.php`)
 
-- `POST api/auth.php?action=signup` - Create new account
-- `POST api/auth.php?action=login` - Login
-- `POST api/auth.php?action=logout` - Logout
-- `GET api/auth.php?action=check` - Check authentication status
+- `POST /api/auth.php?action=signup` - Create new user account
+- `POST /api/auth.php?action=login` - User login
+- `POST /api/auth.php?action=logout` - User logout
+- `GET /api/auth.php?action=check` - Check authentication status
+- `GET /api/auth.php?action=user` - Get current user info
 
 ### Bookmarks (`api/bookmarks.php`)
 
-- `GET api/bookmarks.php` - List all bookmarks (supports `?collection_id=X&search=term&tag=name`)
-- `POST api/bookmarks.php` - Create bookmark
-- `PUT api/bookmarks.php?id=X` - Update bookmark
-- `DELETE api/bookmarks.php?id=X` - Delete bookmark
+- `GET /api/bookmarks.php` - Get all bookmarks for authenticated user
+- `GET /api/bookmarks.php?id={id}` - Get specific bookmark
+- `POST /api/bookmarks.php` - Create new bookmark (supports multipart/form-data for media)
+- `PUT /api/bookmarks.php?id={id}` - Update bookmark
+- `DELETE /api/bookmarks.php?id={id}` - Delete bookmark
 
 ### Collections (`api/collections.php`)
 
-- `GET api/collections.php` - List all collections
-- `POST api/collections.php` - Create collection
-- `PUT api/collections.php?id=X` - Update collection
-- `DELETE api/collections.php?id=X` - Delete collection
+- `GET /api/collections.php` - Get all collections for authenticated user
+- `GET /api/collections.php?id={id}` - Get specific collection
+- `POST /api/collections.php` - Create new collection
+- `PUT /api/collections.php?id={id}` - Update collection
+- `DELETE /api/collections.php?id={id}` - Delete collection
 
-## Troubleshooting
+### Media (`api/media.php`)
 
-### Database Connection Error
+- `GET /api/media.php?f={filename}` - Securely serve uploaded media files
 
-- Check `config.php` database credentials
-- Ensure MySQL service is running
-- Verify database `bookmark_manager` exists
+## 🔐 Security Features
 
-### Extension Not Saving
+### Request Protection
+- **CORS**: Whitelist-based origin validation
+- **CSRF**: Token-based protection for state-changing operations
+- **SQL Injection**: All queries use prepared statements
+- **Input Validation**: Comprehensive sanitization of all user inputs
 
+### Headers
+- Content Security Policy (CSP)
+- X-Frame-Options
+- X-Content-Type-Options
+- X-XSS-Protection
+
+### Authentication
+- Session-based authentication for web app
+- Header-based authentication for browser extensions
+- Password hashing with PHP's `password_hash()`
+- Password requirements: 8+ characters, must include special character
+
+### User Isolation
+- Database-level user_id enforcement
+- Media files validated against user ownership
+- No cross-user data access possible
+
+## 🎯 Usage
+
+### Web Application
+
+1. **Login/Signup**: Access via `login.html` or `signup.html`
+2. **Create Bookmarks**: Click "Add Bookmark" button
+3. **Organize**: Create collections and add tags
+4. **Search**: Use the search bar to filter bookmarks
+5. **Media Upload**: Select audio/video type and upload files
+6. **Manage**: Edit, delete, or favorite bookmarks
+
+### Browser Extension
+
+1. **Login**: Click extension icon and enter credentials
+2. **View Bookmarks**: Browse all bookmarks in the popup
+3. **Quick Save**: Right-click on any page element → "Save to Bookmarks"
+4. **Context Menu Options**:
+   - Save page as bookmark
+   - Save selected text
+   - Save image
+   - Save audio/video
+5. **Delete**: Click delete button on any bookmark in popup
+
+## 🎨 UI Features
+
+- Modern, responsive design
+- Dark/light color scheme
+- Drag-and-drop support
+- Real-time search and filtering
+- Modal dialogs for forms
+- Cookie consent banner
+- Loading states and error handling
+
+## 📚 Documentation
+
+- **README.md** (this file) - Setup and overview
+- **QUICK_START.md** - Quick implementation reference and requirements checklist
+- **CONFIGURATION.md** - Detailed configuration guide
+- **COMPREHENSIVE_DOCUMENTATION.md** - Complete technical documentation
+- **WebExtention/README.md** - Browser extension setup guide
+
+## 🛠️ Development
+
+### Database Schema
+
+The application uses 4 main tables:
+- `users` - User accounts
+- `collections` - Bookmark collections/folders
+- `bookmarks` - Bookmark entries
+- `tags` - Bookmark tags
+
+See [database.sql](database.sql) for complete schema.
+
+### Technology Stack
+
+**Backend:**
+- PHP 7.4+
+- MySQL 5.7+
+- Session-based authentication
+
+**Frontend:**
+- Vanilla JavaScript (ES6+)
+- CSS3 with custom properties
+- No frameworks/libraries required
+
+**Browser Extensions:**
+- WebExtensions API
+- Chrome Manifest V3
+- Firefox WebExtensions
+
+## 🐛 Troubleshooting
+
+### Database Connection Issues
+- Verify MySQL is running
+- Check credentials in `config.php`
+- Ensure database `bookmark_db` exists
+
+### Extension Not Working
+- Check API URL in `popup.js` and `background.js`
+- Verify server is accessible
 - Check browser console for errors
-- Verify API URL in `background.js` matches your server
-- Ensure you're logged in (sessions are required)
-- Check CORS settings if accessing from different domain
+- Ensure CORS headers are set correctly
 
-### Session Issues
+### Media Upload Fails
+- Check `uploads/media/` directory exists and is writable
+- Verify file size limits in php.ini
+- Ensure correct MIME types are configured
 
-- Clear browser cookies and try again
-- Check PHP session configuration in `php.ini`
-- Ensure `session_start()` is called in `config.php`
+### Login/Session Issues
+- Clear browser cookies
+- Check PHP session configuration
+- Verify `session_start()` is called
 
-## Security Notes
+## 📝 License
 
-- Change default database credentials in production
-- Use HTTPS in production
-- Consider adding CSRF protection
-- Implement rate limiting for API endpoints
-- Sanitize all user inputs (already done with prepared statements)
+This is a personal web technology project for educational purposes.
 
-## Future Enhancements
+## 👤 Author
 
-- [ ] Image thumbnail generation
-- [ ] Bookmark preview/metadata fetching
-- [ ] Export/import functionality
-- [ ] Sharing bookmarks between users
-- [ ] Browser sync across devices
-- [ ] Advanced search filters
-- [ ] Bulk operations
+Created as part of a web technology course project.
 
-## License
+---
 
-This project is for educational purposes.
-
+**Note**: For detailed implementation notes and security requirements, see [QUICK_START.md](QUICK_START.md)

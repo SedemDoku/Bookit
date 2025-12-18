@@ -57,10 +57,10 @@ A comprehensive bookmark management system inspired by Raindrop.io, allowing use
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                     Client Layer                             │
+│                     Client Layer                            │
 ├──────────────────────┬──────────────────────────────────────┤
 │  Web Application     │      Browser Extension               │
-│  (index.php)         │      (Chrome Extension)             │
+│  (index.php)         │      (Chrome Extension)              │
 │  - app.js            │      - popup.js                      │
 │  - style.css         │      - background.js                 │
 │  - auth.js           │      - content.js                    │
@@ -72,7 +72,7 @@ A comprehensive bookmark management system inspired by Raindrop.io, allowing use
 ┌──────────▼───────────────────────────▼───────────────────────┐
 │                    API Layer                                 │
 ├──────────────────────────────────────────────────────────────┤
-│  api/auth.php        - Authentication endpoints             │
+│  api/auth.php        - Authentication endpoints              │
 │  api/bookmarks.php   - Bookmark CRUD operations              │
 │  api/collections.php - Collection management                 │
 │  api/media.php       - Media file serving                    │
@@ -81,18 +81,18 @@ A comprehensive bookmark management system inspired by Raindrop.io, allowing use
            │  PDO Prepared Statements
            │
 ┌──────────▼───────────────────────────────────────────────────┐
-│                  Database Layer                               │
+│                  Database Layer                              │
 ├──────────────────────────────────────────────────────────────┤
 │  MySQL Database (bookmark_db)                                │
-│  - users                                                      │
-│  - bookmarks                                                  │
-│  - collections                                                │
-│  - tags                                                       │
-│  - bookmark_tags                                              │
+│  - users                                                     │
+│  - bookmarks                                                 │
+│  - collections                                               │
+│  - tags                                                      │
+│  - bookmark_tags                                             │
 └──────────────────────────────────────────────────────────────┘
 
 ┌──────────────────────────────────────────────────────────────┐
-│                  File Storage Layer                           │
+│                  File Storage Layer                          │
 ├──────────────────────────────────────────────────────────────┤
 │  uploads/media/                                              │
 │  - {userId}_{timestamp}_{hash}.{ext}                         │
