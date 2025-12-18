@@ -1,6 +1,6 @@
 # Bookmark Manager - Full Stack Web Application
 
-A Raindrop.io-inspired bookmark manager built with PHP, MySQL, and vanilla JavaScript. Features a complete web application with user authentication, media upload support, and browser extensions for Chrome and Firefox.
+A Raindrop.io-inspired bookmark manager built with PHP, MySQL, and vanilla JavaScript. Features a complete web application with user authentication, media URL/embedding support (no server-side downloads), and browser extensions for Chrome and Firefox.
 
 ## 🚀 Features
 
@@ -10,7 +10,7 @@ A Raindrop.io-inspired bookmark manager built with PHP, MySQL, and vanilla JavaS
 - ✅ **Collections/Categories** - Nested collection support with hierarchical organization
 - ✅ **Tags System** - Tag-based bookmark organization
 - ✅ **Search & Filter** - Advanced search functionality across bookmarks
-- ✅ **Media Support** - Upload and manage audio/video files with secure serving
+- ✅ **Media URLs & Embeds** - Save and preview external media (YouTube, images) without server downloads
 - ✅ **Multiple Bookmark Types** - Link, text, image, audio, and video bookmarks
 
 ### Browser Extensions
@@ -25,7 +25,7 @@ A Raindrop.io-inspired bookmark manager built with PHP, MySQL, and vanilla JavaS
 - ✅ **Security Headers** - CSP, X-Frame-Options, XSS protection
 - ✅ **Input Validation** - Comprehensive sanitization and validation
 - ✅ **User Isolation** - Strict database-level user data separation
-- ✅ **Secure Media Serving** - Validated file access via dedicated API endpoint
+
 
 ## 📋 Prerequisites
 
@@ -100,14 +100,7 @@ Access at: `http://localhost:8000`
 3. Select `manifest.json` from `WebExtensionFirefox/` folder
 4. Configure API URL in `popup.js` if needed
 
-### 5. Media Upload Configuration
-
-Create the uploads directory with proper permissions:
-
-```bash
-mkdir uploads/media
-chmod 755 uploads/media
-```
+<!-- Media uploads and server-side downloads are disabled in the current state. -->
 
 ### 6. First Use
 
@@ -121,9 +114,9 @@ chmod 755 uploads/media
 Personal_Web_Tech_Project/
 ├── api/
 │   ├── auth.php           # Authentication endpoints (signup, login, logout)
-│   ├── bookmarks.php      # Bookmark CRUD + media upload
+│   ├── bookmarks.php      # Bookmark CRUD
 │   ├── collections.php    # Collection management
-│   └── media.php          # Secure media file serving
+│   └── (media.php removed) # No server-side media serving
 ├── WebExtention/          # Chrome extension
 │   ├── background.js      # Background service worker
 │   ├── content.js         # Content script
@@ -137,7 +130,7 @@ Personal_Web_Tech_Project/
 │   ├── popup.html         # Extension popup UI
 │   ├── popup.js           # Popup logic
 │   └── manifest.json      # Firefox extension manifest
-├── uploads/media/         # User-uploaded media files
+├── uploads/               # (not used for media in current state)
 ├── index.php              # Main application (requires login)
 ├── login.html             # Login page
 ├── signup.html            # Signup page
@@ -171,7 +164,7 @@ Personal_Web_Tech_Project/
 
 - `GET /api/bookmarks.php` - Get all bookmarks for authenticated user
 - `GET /api/bookmarks.php?id={id}` - Get specific bookmark
-- `POST /api/bookmarks.php` - Create new bookmark (supports multipart/form-data for media)
+- `POST /api/bookmarks.php` - Create new bookmark (JSON only; media URLs only)
 - `PUT /api/bookmarks.php?id={id}` - Update bookmark
 - `DELETE /api/bookmarks.php?id={id}` - Delete bookmark
 
@@ -183,9 +176,7 @@ Personal_Web_Tech_Project/
 - `PUT /api/collections.php?id={id}` - Update collection
 - `DELETE /api/collections.php?id={id}` - Delete collection
 
-### Media (`api/media.php`)
 
-- `GET /api/media.php?f={filename}` - Securely serve uploaded media files
 
 ## 🔐 Security Features
 
@@ -209,7 +200,6 @@ Personal_Web_Tech_Project/
 
 ### User Isolation
 - Database-level user_id enforcement
-- Media files validated against user ownership
 - No cross-user data access possible
 
 ## 🎯 Usage
@@ -220,7 +210,6 @@ Personal_Web_Tech_Project/
 2. **Create Bookmarks**: Click "Add Bookmark" button
 3. **Organize**: Create collections and add tags
 4. **Search**: Use the search bar to filter bookmarks
-5. **Media Upload**: Select audio/video type and upload files
 6. **Manage**: Edit, delete, or favorite bookmarks
 
 ### Browser Extension
@@ -295,10 +284,7 @@ See [database.sql](database.sql) for complete schema.
 - Check browser console for errors
 - Ensure CORS headers are set correctly
 
-### Media Upload Fails
-- Check `uploads/media/` directory exists and is writable
-- Verify file size limits in php.ini
-- Ensure correct MIME types are configured
+
 
 ### Login/Session Issues
 - Clear browser cookies

@@ -7,6 +7,8 @@
 
 ---
 
+> Important: In the current state, server-side media uploads and downloads are disabled. Media is stored as external URLs (e.g., YouTube links, image URLs) and rendered by the client without passing through a media-serving API. The `/api/media.php` endpoint and local `uploads/media` storage are not used.
+
 ## Table of Contents
 
 1. [System Overview](#system-overview)
@@ -14,7 +16,7 @@
 3. [Database Schema](#database-schema)
 4. [Authentication System](#authentication-system)
 5. [API Endpoints](#api-endpoints)
-6. [Media Handling System](#media-handling-system)
+6. Media Handling System (disabled)
 7. [Frontend Application](#frontend-application)
 8. [Browser Extension](#browser-extension)
 9. [Security Features](#security-features)
@@ -75,7 +77,7 @@ A comprehensive bookmark management system inspired by Raindrop.io, allowing use
 │  api/auth.php        - Authentication endpoints              │
 │  api/bookmarks.php   - Bookmark CRUD operations              │
 │  api/collections.php - Collection management                 │
-│  api/media.php       - Media file serving                    │
+│  (media endpoint removed)                                    │
 └──────────┬───────────────────────────────────────────────────┘
            │
            │  PDO Prepared Statements
@@ -94,9 +96,7 @@ A comprehensive bookmark management system inspired by Raindrop.io, allowing use
 ┌──────────────────────────────────────────────────────────────┐
 │                  File Storage Layer                          │
 ├──────────────────────────────────────────────────────────────┤
-│  uploads/media/                                              │
-│  - {userId}_{timestamp}_{hash}.{ext}                         │
-│  - Secure file serving via api/media.php                     │
+│  (File storage layer disabled in current state)              │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -635,11 +635,9 @@ Update collection.
 
 Delete collection (cascades to bookmarks via foreign key).
 
-### Media API (`/api/media.php`)
+### Media API (removed)
 
-Securely serves uploaded media files.
-
-#### GET `/api/media.php?f={filename}`
+The dedicated media-serving endpoint is not available in this state. Media is referenced by external URLs (e.g., YouTube, direct image links) and rendered client-side. Do not attempt to upload or serve files from the server.
 
 **Query Parameters:**
 - `f`: Filename (e.g., `1_1234567890_abc123.mp3`)
@@ -671,11 +669,11 @@ X-Frame-Options: DENY
 
 ---
 
-## Media Handling System
+## Media Handling System (Disabled)
 
 ### Overview
 
-The media handling system automatically downloads media files from URLs (Google Drive, email attachments, etc.) and stores them locally for reliable playback.
+Server-side media downloads/uploads are disabled. The application stores media as external URLs and renders via standard browser capabilities (e.g., YouTube embeds, direct image links). No local `uploads/media` storage is used in this state.
 
 ### Supported Media Types
 
@@ -766,7 +764,7 @@ For direct file uploads (multipart form data):
 
 ### Storage Location
 
-**Directory:** `uploads/media/`
+**Directory:** `uploads/media/` (not used in current state)
 
 **Permissions:**
 - Read: Web server user
@@ -774,22 +772,12 @@ For direct file uploads (multipart form data):
 - Recommended: 755 (directory), 644 (files)
 
 **Security:**
-- Files NOT directly accessible via URL
-- Must go through `api/media.php` for access
-- User authentication required
-- Ownership verification
+- Server file storage and serving are disabled in this state.
+- Media should be referenced by external URLs (e.g., YouTube, images).
 
 ### Media Serving
 
-**Endpoint:** `/api/media.php?f={filename}`
-
-**Authentication:**
-- Primary: HTTP headers (`X-User-ID`, `X-User-Email`)
-- Fallback: URL parameters (`user_id`, `user_email`) for HTML media elements
-
-**Access Control:**
-1. Extract user ID from filename
-2. Verify requesting user matches file owner
+In this state there is no server media endpoint. Clients render media from external URLs (e.g., YouTube embeds or direct image links).
 3. Verify file exists in user's bookmarks
 4. Verify MIME type is allowed
 5. Serve file with proper headers
@@ -863,8 +851,8 @@ const state = {
 const filename = item.content.includes('/') 
   ? item.content.split('/').pop() 
   : item.content;
-const mediaUrl = `api/media.php?f=${filename}&user_id=${currentUser.user_id}&user_email=${currentUser.email}`;
-return `<audio controls src="${mediaUrl}"></audio>`;
+// In URL-only mode, use the original external URL directly
+return `<audio controls src="${item.content}"></audio>`;
 ```
 
 **Video:**
@@ -872,8 +860,8 @@ return `<audio controls src="${mediaUrl}"></audio>`;
 const filename = item.content.includes('/') 
   ? item.content.split('/').pop() 
   : item.content;
-const mediaUrl = `api/media.php?f=${filename}&user_id=${currentUser.user_id}&user_email=${currentUser.email}`;
-return `<video controls src="${mediaUrl}"></video>`;
+// In URL-only mode, use the original external URL directly or embed YouTube
+return `<video controls src="${item.content}"></video>`;
 ```
 
 **Image:**
@@ -1143,9 +1131,9 @@ header('X-Frame-Options: DENY');
 ### File System Security
 
 1. **Upload Directory:**
-   - Not directly web-accessible
-   - All access through `api/media.php`
-   - Proper file permissions
+  - Not used in current state (URL-only media)
+  - No server file access
+  - File permission guidance not applicable
 
 2. **Filename Security:**
    - User ID prefix prevents access to other users' files
@@ -1172,8 +1160,7 @@ Personal_Web_Tech_Project/
 │   ├── popup.js                  # Popup logic
 │   └── bookmark-ribbon-icon.png  # Extension icon
 │
-├── uploads/                      # Media Storage
-│   └── media/                    # Uploaded media files
+├── uploads/                      # (unused for media in current state)
 │
 ├── config.php                    # Configuration & utilities
 ├── index.php                     # Main application page

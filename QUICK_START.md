@@ -6,6 +6,8 @@ Complete implementation status and quick reference guide for the Personal Web Te
 
 All core requirements and features have been successfully implemented with full security hardening.
 
+> Note: Server-side media uploads and downloads are disabled. Media is saved as external URLs (e.g., YouTube links, image URLs) and rendered directly by the client. The `api/media.php` endpoint is removed in this state.
+
 ---
 
 ## 📋 Implementation Checklist
@@ -27,13 +29,7 @@ All core requirements and features have been successfully implemented with full 
   - Search and filter functionality
   - Favorite bookmarks
 
-- [x] **Media Upload System**
-  - Audio file uploads (mp3, wav, webm, m4a, flac)
-  - Video file uploads (mp4, webm, mov, avi)
-  - Server-side file storage
-  - Secure media serving endpoint
-  - File size validation (50MB limit)
-  - MIME type validation
+ 
 
 - [x] **Browser Extensions**
   - Chrome extension (Manifest V3)
@@ -115,17 +111,7 @@ define('DB_USER', 'your_username');
 define('DB_PASS', 'your_password');
 ```
 
-### 3. Setup Media Directory (10 seconds)
-
-```bash
-mkdir -p uploads/media
-chmod 755 uploads/media
-```
-
-Windows:
-```powershell
-New-Item -ItemType Directory -Path uploads\media -Force
-```
+ 
 
 ### 4. Start Server
 
@@ -178,20 +164,7 @@ SELECT * FROM collections WHERE user_id = :user_id;
 -- No query can access other users' data
 ```
 
-### Media Upload Security
-
-```
-Upload → Validate Size → Validate Extension → Validate MIME
-      → Generate Unique Name (userId_timestamp_hash.ext)
-      → Save to uploads/media/
-      → Store Path in Database
-```
-
-**Serving:**
-```
-Request → Authenticate User → Verify File Ownership
-       → Validate MIME Type → Set Headers → Serve File
-```
+ 
 
 ---
 
@@ -203,9 +176,9 @@ Request → Authenticate User → Verify File Ownership
 |------|---------|----------|
 | `config.php` | DB config, security functions | CORS, CSRF, headers |
 | `api/auth.php` | Signup, login, logout | Password hashing, validation |
-| `api/bookmarks.php` | Bookmark CRUD + uploads | SQL injection prevention |
+| `api/bookmarks.php` | Bookmark CRUD | SQL injection prevention |
 | `api/collections.php` | Collection management | User isolation |
-| `api/media.php` | Secure file serving | Ownership validation |
+ 
 
 ### Frontend (Web App)
 
@@ -260,10 +233,10 @@ GET /api/bookmarks.php
 # Get specific bookmark
 GET /api/bookmarks.php?id=123
 
-# Create bookmark (with media)
+# Create bookmark
 POST /api/bookmarks.php
-Content-Type: multipart/form-data
-Body: FormData with title, type, url, description, media_file
+Content-Type: application/json
+Body: { title, type, url, content, description, tags, collection_id }
 
 # Update bookmark
 PUT /api/bookmarks.php?id=123
@@ -291,12 +264,7 @@ Body: { name, parent_id }
 DELETE /api/collections.php?id=123
 ```
 
-### Media
-
-```bash
-# Serve media file
-GET /api/media.php?f=12_1734567890_abc123.mp3
-```
+ 
 
 ---
 
@@ -326,20 +294,7 @@ fetch('api/bookmarks.php?search=\'; DROP TABLE bookmarks; --')
 
 ### Functional Testing
 
-**Test Upload:**
-```javascript
-const formData = new FormData();
-formData.append('title', 'Test Audio');
-formData.append('type', 'audio');
-formData.append('media_file', audioFile);
-
-fetch('api/bookmarks.php', {
-  method: 'POST',
-  credentials: 'include',
-  body: formData
-}).then(r => r.json())
-  .then(data => console.log('Upload success:', data));
-```
+ 
 
 **Test Authentication:**
 ```bash
@@ -386,15 +341,6 @@ id, bookmark_id, name, created_at
 ### Security Defaults
 
 ```php
-// Max file size: 50MB
-define('MAX_FILE_SIZE', 50 * 1024 * 1024);
-
-// Upload directory
-define('UPLOAD_DIR', 'uploads/media');
-
-// Allowed file extensions
-['mp3', 'wav', 'webm', 'mp4', 'mov', 'avi', 'm4a', 'flac']
-
 // Session timeout: 2 hours inactivity
 ini_set('session.gc_maxlifetime', 7200);
 
@@ -460,16 +406,16 @@ $dbPass = getenv('DB_PASS');
 
 | File | Changes |
 |------|---------|
-| `config.php` | Added CORS, CSRF, security headers, media functions |
+| `config.php` | Added CORS, CSRF, security headers |
 | `api/auth.php` | CORS headers, CSRF validation, SQL injection fixes |
-| `api/bookmarks.php` | SQL injection fixes, media upload, CORS |
+| `api/bookmarks.php` | SQL injection fixes, CORS |
 | `api/collections.php` | CORS headers, SQL injection fixes |
 
 ### New Files Created
 
 | File | Purpose |
 |------|---------|
-| `api/media.php` | Secure media file serving |
+ 
 | `cookies.js` | Cookie consent handling |
 | `cookies.css` | Cookie banner styles |
 | `CONFIGURATION.md` | Configuration guide |
@@ -483,13 +429,11 @@ Before going live:
 
 - [ ] Import `database.sql` into production database
 - [ ] Update `config.php` with production credentials
-- [ ] Create `uploads/media/` directory (writable)
 - [ ] Configure browser extension API URLs
 - [ ] Add production domain to CORS whitelist
 - [ ] Enable HTTPS and secure cookies
 - [ ] Set proper file permissions (644 for files, 755 for dirs)
 - [ ] Test all API endpoints
-- [ ] Test media upload and serving
 - [ ] Test authentication flow
 - [ ] Verify security headers
 - [ ] Set up environment variables (optional)
@@ -504,7 +448,7 @@ This project demonstrates:
 2. **RESTful API design** (proper HTTP methods and status codes)
 3. **Security best practices** (CORS, CSRF, SQL injection prevention)
 4. **Session management** (PHP sessions + extension auth)
-5. **File upload handling** (validation, storage, serving)
+5. **Media via external URLs** (YouTube embeds, image links)
 6. **Browser extension development** (Chrome & Firefox)
 7. **Responsive web design** (modern CSS, mobile-friendly)
 8. **Database design** (normalization, foreign keys, indexes)
@@ -536,159 +480,4 @@ This project demonstrates:
 
 ---
 
-## SETUP REQUIREMENTS
-
-### Create Upload Directory
-```bash
-mkdir -p uploads/media
-chmod 755 uploads/media
-```
-
-That's it! The system is ready to use.
-
----
-
-## FILES CHANGED
-
-| File | Changes |
-|------|---------|
-| `config.php` | +CORS function, +media upload handlers, +CSRF functions |
-| `api/auth.php` | Fixed CORS, added CSRF check |
-| `api/bookmarks.php` | Fixed SQL injection, CORS, file upload support |
-| `api/collections.php` | Fixed CORS |
-| `app.js` | Media URL handling via secure endpoint |
-| `popup.js` | Media URL handling via secure endpoint |
-
-## NEW FILES
-
-| File | Purpose |
-|------|---------|
-| `api/media.php` | Secure media file serving endpoint |
-| `SECURITY_FIXES.md` | Detailed security improvements |
-| `MEDIA_UPLOAD_SETUP.md` | Setup guide |
-| `IMPLEMENTATION_COMPLETE.md` | Full implementation details |
-
----
-
-## VERIFICATION
-
-### Quick Security Check
-```javascript
-// Test CORS (should fail)
-fetch('http://evil.com/api/bookmarks.php')
-// Result: CORS policy blocks it ✅
-
-// Test Auth (should work)
-fetch('api/bookmarks.php', { credentials: 'include' })
-// Result: Returns user's bookmarks ✅
-
-// Test Other User's Data (should fail)
-// Even if you guess user_id, ownership verified ✅
-```
-
-### Quick Upload Test
-```javascript
-// Create audio bookmark
-const formData = new FormData();
-formData.append('title', 'My Recording');
-formData.append('type', 'audio');
-formData.append('media_file', audioFile);
-
-fetch('api/bookmarks.php', {
-  method: 'POST',
-  credentials: 'include',
-  body: formData
-})
-// File saved to: uploads/media/12_1701234567_abc123.mp3
-// Database stores path
-// Playable via: api/media.php?f=12_1701234567_abc123.mp3
-```
-
----
-
-## KEY SECURITY IMPROVEMENTS
-
-### Before vs After
-
-| Vulnerability | Before | After |
-|---------------|--------|-------|
-| CORS | `*` (anyone) | Whitelist only |
-| SQL Injection | `"%$search%"` | Parameterized |
-| CSRF | None | Token system |
-| Credentials | Hardcoded | Env vars |
-| Media Files | Not uploaded | Server storage |
-| File Access | Direct | Verified endpoint |
-| Security Headers | Missing | Complete set |
-
----
-
-## IMPORTANT NOTES
-
-1. **Create uploads directory** before deploying
-2. **Existing bookmarks** continue to work
-3. **Image URLs** unchanged (still direct links)
-4. **Audio/Video** now use upload system
-5. **Backward compatible** - old data still works
-
----
-
-## CONFIGURATION
-
-### Default Settings (Fine for School Server)
-- Max file size: 50MB
-- Allowed origins: localhost, 127.0.0.1, school server
-- Session timeout: 2 hours inactivity
-- CSRF token length: 32 chars
-
-### For Production
-```php
-// In config.php
-ini_set('session.cookie_secure', 1);  // HTTPS only
-define('MAX_FILE_SIZE', 100 * 1024 * 1024); // Adjust if needed
-// Set environment variables for credentials
-```
-
----
-
-## TESTING QUICK COMMANDS
-
-```bash
-# Create uploads directory
-mkdir -p uploads/media
-
-# Test directory is writable
-touch uploads/media/test.txt && rm uploads/media/test.txt
-
-# Check permissions
-ls -la uploads/media
-
-# Test API
-curl -X OPTIONS http://localhost/api/bookmarks.php
-# Should see Access-Control headers
-
-# Test media serving
-curl http://localhost/api/media.php?f=test.mp3
-# Should return file or 404 if file doesn't exist
-```
-
----
-
-## SUMMARY
-
-**Status: ✅ COMPLETE AND SECURE**
-
-- [x] Site security hardened
-- [x] Database queries verified secure
-- [x] Media upload system implemented
-- [x] User isolation enforced
-- [x] File ownership verified
-- [x] CORS, CSRF, SQL injection fixed
-- [x] Documentation complete
-
-**Ready for production after:**
-1. Creating uploads/media directory
-2. Testing file uploads
-3. Setting environment variables (if needed)
-4. Enabling HTTPS (production only)
-
-**No breaking changes - existing data works!**
+ 

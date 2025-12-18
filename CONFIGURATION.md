@@ -9,7 +9,6 @@ Complete configuration reference for the Personal Web Tech Bookmark Manager proj
 - [API URL Configuration](#api-url-configuration)
 - [Browser Extension Configuration](#browser-extension-configuration)
 - [Security Configuration](#security-configuration)
-- [Media Upload Configuration](#media-upload-configuration)
 - [Deployment Scenarios](#deployment-scenarios)
 - [Troubleshooting](#troubleshooting)
 
@@ -69,8 +68,7 @@ Import using: `mysql -u username -p bookmark_db < database.sql`
 | `DB_NAME` | `bookmark_db` | Database name |
 | `DB_USER` | (required) | Database username |
 | `DB_PASS` | (required) | Database password |
-| `MAX_FILE_SIZE` | `52428800` | Max upload size in bytes (50MB) |
-| `UPLOAD_DIR` | `uploads/media` | Media upload directory |
+
 
 ---
 
@@ -83,7 +81,7 @@ The web app uses **relative paths** by default, which work automatically:
 - `api/auth.php`
 - `api/bookmarks.php`
 - `api/collections.php`
-- `api/media.php`
+
 
 **No configuration needed** unless hosting at a non-root path.
 
@@ -202,66 +200,7 @@ Configured in `api/auth.php`:
 
 ---
 
-## Media Upload Configuration
-
-### Upload Directory Setup
-
-**Create the upload directory:**
-
-```bash
-mkdir -p uploads/media
-chmod 755 uploads/media
-```
-
-**Windows:**
-```powershell
-New-Item -ItemType Directory -Path uploads\media -Force
-```
-
-### Upload Limits
-
-**Configured in `config.php`:**
-
-```php
-define('MAX_FILE_SIZE', 50 * 1024 * 1024); // 50MB
-```
-
-**PHP.ini settings (may need adjustment):**
-
-```ini
-upload_max_filesize = 50M
-post_max_size = 50M
-max_execution_time = 300
-```
-
-### Supported File Types
-
-**Audio:**
-- mp3, wav, webm, m4a, flac
-
-**Video:**
-- mp4, webm, mov, avi
-
-**MIME type validation** on both upload and serving.
-
-### File Naming Convention
-
-Files are stored as: `{userId}_{timestamp}_{hash}.{ext}`
-
-Example: `12_1734567890_a1b2c3d4.mp3`
-
-### Secure Media Serving
-
-Media files are served via `api/media.php` with:
-- User authentication check
-- File ownership validation
-- MIME type verification
-- Direct file access blocked
-
-**Access URL:**
-```
-GET api/media.php?f=12_1734567890_a1b2c3d4.mp3
-```
+> Note: Server-side media uploads and downloads are disabled. Media is stored as external URLs (e.g., YouTube links, image URLs) and rendered directly by the client. The `api/media.php` endpoint is removed in this state.
 
 ---
 
@@ -324,7 +263,6 @@ GET api/media.php?f=12_1734567890_a1b2c3d4.mp3
    ```bash
    chmod 644 *.php
    chmod 755 api/
-   chmod 755 uploads/media/
    ```
 
 ---
@@ -361,17 +299,6 @@ GET api/media.php?f=12_1734567890_a1b2c3d4.mp3
 - Verify `Access-Control-Allow-Origin` header is set
 - For extensions, ensure `chrome-extension://*` is allowed
 
-### Media Upload Fails
-
-**Problem:** "Failed to upload media"
-
-**Solutions:**
-- Check `uploads/media/` directory exists
-- Verify directory is writable: `ls -la uploads/`
-- Check PHP upload limits in `php.ini`
-- Verify file size is under limit
-- Check file extension is supported
-
 ### Session/Login Issues
 
 **Problem:** "Session expired" or can't stay logged in
@@ -390,7 +317,6 @@ GET api/media.php?f=12_1734567890_a1b2c3d4.mp3
 - Set proper file permissions:
   ```bash
   chmod 644 *.php
-  chmod 755 uploads/media/
   ```
 - Check Apache/PHP user has write access
 - On Windows, check folder security settings
@@ -413,10 +339,8 @@ Before deploying, ensure:
 
 - [ ] Database credentials set in `config.php`
 - [ ] Database schema imported (`database.sql`)
-- [ ] `uploads/media/` directory created and writable
 - [ ] Extension API URLs configured
 - [ ] CORS origins include your domain
-- [ ] PHP upload limits set appropriately
 - [ ] Security headers enabled
 - [ ] HTTPS enabled (production)
 - [ ] Environment variables set (if using)
