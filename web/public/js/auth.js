@@ -85,13 +85,15 @@ function showSuccess(message) {
   }
 
   try {
-    const response = await fetch(`${API_BASE}/auth.php?action=check`, {
-      method: 'GET',
+    const response = await fetch(`${API_BASE}/auth`, {
+      method: 'POST',
       credentials: 'include',
       headers: {
+        'Content-Type': 'application/json',
         'X-User-ID': storedUser.user_id,
         'X-User-Email': storedUser.email
-      }
+      },
+      body: JSON.stringify({ action: 'check' })
     });
     
     console.log('Auth check status:', response.status);
@@ -105,8 +107,8 @@ function showSuccess(message) {
     console.log('Auth check response:', data);
     
     if (data.success && data.authenticated) {
-      console.log('User is logged in, redirecting to index.php');
-      window.location.href = 'index.php';
+      console.log('User is logged in, redirecting to /app');
+      window.location.href = '/app';
     } else {
       clearUserSession();
       console.log('User is not logged in:', data);
@@ -160,11 +162,11 @@ if (loginForm) {
     
     try {
       showSuccess("Logging in...");
-      const response = await fetch(`${API_BASE}/auth.php?action=login`, {
+      const response = await fetch(`${API_BASE}/auth`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ action: 'login', email, password })
       });
       
       const data = await response.json();
@@ -173,7 +175,7 @@ if (loginForm) {
         saveUserSession(data.data);
         showSuccess("Login successful! Redirecting...");
         setTimeout(() => {
-          window.location.href = 'index.php';
+          window.location.href = '/app';
         }, 1000);
       } else {
         showError(data.error || "Login failed");
@@ -206,11 +208,11 @@ if (signupForm) {
     
     try {
       showSuccess("Creating account...");
-      const response = await fetch(`${API_BASE}/auth.php?action=signup`, {
+      const response = await fetch(`${API_BASE}/auth`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ username, email, password, confirmPassword })
+        body: JSON.stringify({ action: 'signup', username, email, password, confirmPassword })
       });
       
       const data = await response.json();
@@ -219,7 +221,7 @@ if (signupForm) {
         saveUserSession(data.data);
         showSuccess("Account created! Redirecting...");
         setTimeout(() => {
-          window.location.href = 'index.php';
+          window.location.href = '/app';
         }, 1000);
       } else {
         showError(data.error || "Signup failed");
