@@ -1,4 +1,7 @@
 <?php
+require_once __DIR__ . '/env.php';
+loadEnvFile(__DIR__ . '/.env');
+
 // Database configuration - Use environment variables in production
 // Supabase Postgres defaults: set DATABASE_URL or DB_* vars.
 define('DB_DRIVER', getenv('DB_DRIVER') ?: 'pgsql');

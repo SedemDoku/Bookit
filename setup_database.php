@@ -1,4 +1,7 @@
 <?php
+require_once __DIR__ . '/env.php';
+loadEnvFile(__DIR__ . '/.env');
+
 // Database setup script for Supabase Postgres
 $databaseUrl = getenv('DATABASE_URL');
 
