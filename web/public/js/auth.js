@@ -85,15 +85,14 @@ function showSuccess(message) {
   }
 
   try {
-    const response = await fetch(`${API_BASE}/auth`, {
+    const response = await fetch(`${API_BASE}/auth?action=check`, {
       method: 'POST',
       credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
         'X-User-ID': storedUser.user_id,
         'X-User-Email': storedUser.email
-      },
-      body: JSON.stringify({ action: 'check' })
+      }
     });
     
     console.log('Auth check status:', response.status);
@@ -162,11 +161,11 @@ if (loginForm) {
     
     try {
       showSuccess("Logging in...");
-      const response = await fetch(`${API_BASE}/auth`, {
+      const response = await fetch(`${API_BASE}/auth?action=login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ action: 'login', email, password })
+        body: JSON.stringify({ email, password })
       });
       
       const data = await response.json();
@@ -208,11 +207,11 @@ if (signupForm) {
     
     try {
       showSuccess("Creating account...");
-      const response = await fetch(`${API_BASE}/auth`, {
+      const response = await fetch(`${API_BASE}/auth?action=signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ action: 'signup', username, email, password, confirmPassword })
+        body: JSON.stringify({ username, email, password, confirmPassword })
       });
       
       const data = await response.json();
