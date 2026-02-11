@@ -68,17 +68,21 @@ try {
             $db->beginTransaction();
         
         // Clear existing positions and connections for this collection
-        $stmt = $db->prepare(
-            "DELETE bcp FROM bookmark_canvas_positions bcp
-             INNER JOIN bookmarks b ON b.id = bcp.bookmark_id
-             WHERE bcp.collection_id = ? AND b.user_id = ?"
-        );
+                $stmt = $db->prepare(
+                        "DELETE FROM bookmark_canvas_positions bcp
+                         USING bookmarks b
+                         WHERE b.id = bcp.bookmark_id
+                             AND bcp.collection_id = ?
+                             AND b.user_id = ?"
+                );
         $stmt->execute([$collectionId, $userId]);
         
         $stmt = $db->prepare(
-            "DELETE bcc FROM bookmark_canvas_connections bcc
-             INNER JOIN bookmarks b ON b.id = bcc.from_bookmark_id
-             WHERE bcc.collection_id = ? AND b.user_id = ?"
+                        "DELETE FROM bookmark_canvas_connections bcc
+                         USING bookmarks b
+                         WHERE b.id = bcc.from_bookmark_id
+                             AND bcc.collection_id = ?
+                             AND b.user_id = ?"
         );
         $stmt->execute([$collectionId, $userId]);
         
@@ -87,7 +91,8 @@ try {
             $stmt = $db->prepare(
                 "INSERT INTO bookmark_canvas_positions (bookmark_id, collection_id, x_position, y_position)
                  VALUES (?, ?, ?, ?)
-                 ON DUPLICATE KEY UPDATE x_position = VALUES(x_position), y_position = VALUES(y_position)"
+                 ON CONFLICT (bookmark_id, collection_id)
+                 DO UPDATE SET x_position = EXCLUDED.x_position, y_position = EXCLUDED.y_position"
             );
             
             foreach ($positions as $pos) {

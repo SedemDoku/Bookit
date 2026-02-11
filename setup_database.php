@@ -1,46 +1,43 @@
 <?php
-// Database setup script
-$host = 'localhost';
-$user = 'sedem.doku';
-$pass = 'Nana Yaa';
+// Database setup script for Supabase Postgres
+$databaseUrl = getenv('DATABASE_URL');
+
+if (!$databaseUrl) {
+    echo "Error: DATABASE_URL is not set.\n";
+    exit(1);
+}
+
+$parts = parse_url($databaseUrl);
+if ($parts === false || empty($parts['host']) || empty($parts['path'])) {
+    echo "Error: Invalid DATABASE_URL.\n";
+    exit(1);
+}
+
+$host = $parts['host'];
+$port = isset($parts['port']) ? $parts['port'] : '5432';
+$dbName = ltrim($parts['path'], '/');
+$user = isset($parts['user']) ? urldecode($parts['user']) : '';
+$pass = isset($parts['pass']) ? urldecode($parts['pass']) : '';
 
 try {
-    // Connect without database first
-    $pdo = new PDO("mysql:host=$host", $user, $pass);
+    $dsn = "pgsql:host=$host;port=$port;dbname=$dbName;sslmode=require";
+    $pdo = new PDO($dsn, $user, $pass);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     
-    echo "Connected to MySQL successfully!\n\n";
+    echo "Connected to Postgres successfully!\n\n";
     
     // Read and execute the SQL file
     $sql = file_get_contents(__DIR__ . '/database.sql');
     
-    // Split by semicolon and execute each statement
-    $statements = array_filter(array_map('trim', explode(';', $sql)));
-    
-    foreach ($statements as $statement) {
-        if (empty($statement) || strpos($statement, '--') === 0) {
-            continue;
-        }
-        try {
-            $pdo->exec($statement);
-            $firstLine = explode("\n", $statement)[0];
-            echo "✓ Executed: " . substr($firstLine, 0, 60) . "...\n";
-        } catch (PDOException $e) {
-            // Skip errors for "already exists" since we use IF NOT EXISTS
-            if (strpos($e->getMessage(), 'already exists') === false) {
-                echo "✗ Error: " . $e->getMessage() . "\n";
-            }
-        }
-    }
-    
+    // Execute as a single batch to support functions and triggers
+    $pdo->exec($sql);
     echo "\n✓ Database setup complete!\n";
     
     // Verify tables
-    $pdo->exec("USE bookmark_db");
-    $stmt = $pdo->query("SHOW TABLES");
+    $stmt = $pdo->query("SELECT tablename FROM pg_tables WHERE schemaname = 'public'");
     $tables = $stmt->fetchAll(PDO::FETCH_COLUMN);
-    
-    echo "\nTables in bookmark_db:\n";
+
+    echo "\nTables in public schema:\n";
     foreach ($tables as $table) {
         echo "  - $table\n";
     }

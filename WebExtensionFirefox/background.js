@@ -88,7 +88,7 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
 async function saveItem(newItem) {
   // Get API URL and user info from storage
   const result = await browser.storage.local.get({ 
-    apiUrl: 'http://169.239.251.102:341/~sedem.doku/Personal_Web_Tech_Project/api',
+    apiUrl: 'https://bookit.infinityfreeapp.com/api',
     user_id: null,
     user_email: null
   });

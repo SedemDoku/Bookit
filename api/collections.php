@@ -107,10 +107,9 @@ function handleCreateCollection($db, $userId) {
         }
     }
     
-    $stmt = $db->prepare("INSERT INTO collections (user_id, name, parent_id) VALUES (?, ?, ?)");
+    $stmt = $db->prepare("INSERT INTO collections (user_id, name, parent_id) VALUES (?, ?, ?) RETURNING id");
     $stmt->execute([$userId, $name, $parentId]);
-    
-    $collectionId = $db->lastInsertId();
+    $collectionId = $stmt->fetchColumn();
     
     $stmt = $db->prepare("SELECT c.*, COUNT(b.id) as bookmark_count
                           FROM collections c

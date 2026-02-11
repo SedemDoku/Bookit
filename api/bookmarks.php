@@ -62,7 +62,7 @@ function handleGetBookmarks($db, $userId) {
     $favorite = $_GET['favorite'] ?? '';
     
     $sql = "SELECT b.*, 
-                   GROUP_CONCAT(DISTINCT t.name) as tags,
+                   COALESCE(STRING_AGG(DISTINCT t.name, ','), '') as tags,
                    c.name as collection_name
             FROM bookmarks b
             LEFT JOIN bookmark_tags bt ON b.id = bt.bookmark_id
@@ -82,14 +82,14 @@ function handleGetBookmarks($db, $userId) {
     }
     
     if (!empty($search)) {
-        $sql .= " AND (b.title LIKE ? OR b.description LIKE ? OR b.content LIKE ?)";
+        $sql .= " AND (b.title ILIKE ? OR b.description ILIKE ? OR b.content ILIKE ?)";
         $searchParam = "%" . $search . "%";
         $params[] = $searchParam;
         $params[] = $searchParam;
         $params[] = $searchParam;
     }
-    
-    $sql .= " GROUP BY b.id ORDER BY b.created_at DESC";
+
+    $sql .= " GROUP BY b.id, c.name ORDER BY b.created_at DESC";
     
     $stmt = $db->prepare($sql);
     $stmt->execute($params);
@@ -160,10 +160,9 @@ function handleCreateBookmark($db, $userId) {
     
     // Insert bookmark
     $stmt = $db->prepare("INSERT INTO bookmarks (user_id, collection_id, title, url, type, content, description, favorite) 
-                          VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                          VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id");
     $stmt->execute([$userId, $collectionId, $title, $url, $type, $content, $description, $favorite ? 1 : 0]);
-    
-    $bookmarkId = $db->lastInsertId();
+    $bookmarkId = $stmt->fetchColumn();
     
     // Handle tags
     if (!empty($tags) && is_array($tags)) {
@@ -172,20 +171,16 @@ function handleCreateBookmark($db, $userId) {
             if (empty($tagName)) continue;
             
             // Get or create tag
-            $stmt = $db->prepare("SELECT id FROM tags WHERE user_id = ? AND name = ?");
+            $stmt = $db->prepare(
+                "INSERT INTO tags (user_id, name) VALUES (?, ?) " .
+                "ON CONFLICT (user_id, name) DO UPDATE SET name = EXCLUDED.name " .
+                "RETURNING id"
+            );
             $stmt->execute([$userId, $tagName]);
-            $tag = $stmt->fetch();
-            
-            if (!$tag) {
-                $stmt = $db->prepare("INSERT INTO tags (user_id, name) VALUES (?, ?)");
-                $stmt->execute([$userId, $tagName]);
-                $tagId = $db->lastInsertId();
-            } else {
-                $tagId = $tag['id'];
-            }
-            
+            $tagId = $stmt->fetchColumn();
+
             // Link bookmark to tag
-            $stmt = $db->prepare("INSERT IGNORE INTO bookmark_tags (bookmark_id, tag_id) VALUES (?, ?)");
+            $stmt = $db->prepare("INSERT INTO bookmark_tags (bookmark_id, tag_id) VALUES (?, ?) ON CONFLICT DO NOTHING");
             $stmt->execute([$bookmarkId, $tagId]);
         }
     }
@@ -277,19 +272,15 @@ function handleUpdateBookmark($db, $userId) {
             $tagName = trim($tagName);
             if (empty($tagName)) continue;
             
-            $stmt = $db->prepare("SELECT id FROM tags WHERE user_id = ? AND name = ?");
+            $stmt = $db->prepare(
+                "INSERT INTO tags (user_id, name) VALUES (?, ?) " .
+                "ON CONFLICT (user_id, name) DO UPDATE SET name = EXCLUDED.name " .
+                "RETURNING id"
+            );
             $stmt->execute([$userId, $tagName]);
-            $tag = $stmt->fetch();
-            
-            if (!$tag) {
-                $stmt = $db->prepare("INSERT INTO tags (user_id, name) VALUES (?, ?)");
-                $stmt->execute([$userId, $tagName]);
-                $tagId = $db->lastInsertId();
-            } else {
-                $tagId = $tag['id'];
-            }
-            
-            $stmt = $db->prepare("INSERT IGNORE INTO bookmark_tags (bookmark_id, tag_id) VALUES (?, ?)");
+            $tagId = $stmt->fetchColumn();
+
+            $stmt = $db->prepare("INSERT INTO bookmark_tags (bookmark_id, tag_id) VALUES (?, ?) ON CONFLICT DO NOTHING");
             $stmt->execute([$bookmarkId, $tagId]);
         }
     }

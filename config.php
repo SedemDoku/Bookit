@@ -1,10 +1,15 @@
 <?php
 // Database configuration - Use environment variables in production
-// Default to local MySQL (adjust DB_* env vars on the server if different)
+// Supabase Postgres defaults: set DATABASE_URL or DB_* vars.
+define('DB_DRIVER', getenv('DB_DRIVER') ?: 'pgsql');
 define('DB_HOST', getenv('DB_HOST') ?: 'localhost');
-define('DB_NAME', getenv('DB_NAME') ?: 'webtech_2025A_sedem_doku');
-define('DB_USER', getenv('DB_USER') ?: 'sedem.doku');
-define('DB_PASS', getenv('DB_PASS') ?: 'Nana Yaa');
+define('DB_PORT', getenv('DB_PORT') ?: '5432');
+define('DB_NAME', getenv('DB_NAME') ?: 'postgres');
+define('DB_USER', getenv('DB_USER') ?: 'postgres');
+define('DB_PASS', getenv('DB_PASS') ?: '');
+define('DB_SSLMODE', getenv('DB_SSLMODE') ?: 'require');
+define('DB_DSN', getenv('DB_DSN') ?: '');
+define('DATABASE_URL', getenv('DATABASE_URL') ?: '');
 
 // Security configuration
 define('ALLOWED_ORIGINS', ['http://169.239.251.102:341', 'http://localhost', 'http://127.0.0.1']);
@@ -36,13 +41,35 @@ function getDB() {
     static $pdo = null;
     if ($pdo === null) {
         try {
-            $dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4";
+            $dsn = '';
+            $dbUser = DB_USER;
+            $dbPass = DB_PASS;
+            if (DB_DSN) {
+                $dsn = DB_DSN;
+            } elseif (DATABASE_URL) {
+                $parsed = buildPgDsnFromUrl(DATABASE_URL);
+                $dsn = $parsed['dsn'];
+                if (!empty($parsed['user'])) {
+                    $dbUser = $parsed['user'];
+                }
+                if (!empty($parsed['pass'])) {
+                    $dbPass = $parsed['pass'];
+                }
+            } else {
+                $dsn = DB_DRIVER . ":host=" . DB_HOST . ";port=" . DB_PORT . ";dbname=" . DB_NAME;
+                if (DB_DRIVER === 'pgsql') {
+                    $dsn .= ";sslmode=" . DB_SSLMODE;
+                } else {
+                    $dsn .= ";charset=utf8mb4";
+                }
+            }
+
             $options = [
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 PDO::ATTR_EMULATE_PREPARES => false,
             ];
-            $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
+            $pdo = new PDO($dsn, $dbUser, $dbPass, $options);
         } catch (PDOException $e) {
             error_log("Database connection failed: " . $e->getMessage());
             http_response_code(500);
@@ -55,6 +82,26 @@ function getDB() {
         }
     }
     return $pdo;
+}
+
+// Build a pgsql PDO DSN from a postgresql:// URL
+function buildPgDsnFromUrl($url) {
+    $parts = parse_url($url);
+    if ($parts === false || empty($parts['host']) || empty($parts['path'])) {
+        return ['dsn' => '', 'user' => '', 'pass' => ''];
+    }
+
+    $host = $parts['host'];
+    $port = isset($parts['port']) ? $parts['port'] : '5432';
+    $dbName = ltrim($parts['path'], '/');
+    $user = isset($parts['user']) ? urldecode($parts['user']) : '';
+    $pass = isset($parts['pass']) ? urldecode($parts['pass']) : '';
+
+    return [
+        'dsn' => "pgsql:host={$host};port={$port};dbname={$dbName};sslmode=" . DB_SSLMODE,
+        'user' => $user,
+        'pass' => $pass
+    ];
 }
 
 // Authenticate a user based on explicit headers (stateless)

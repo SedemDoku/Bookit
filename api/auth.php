@@ -97,10 +97,9 @@ function handleSignup() {
     
     // Create user
     $passwordHash = password_hash($password, PASSWORD_DEFAULT);
-    $stmt = $db->prepare("INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)");
+    $stmt = $db->prepare("INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?) RETURNING id");
     $stmt->execute([$username, $email, $passwordHash]);
-    
-    $userId = $db->lastInsertId();
+    $userId = $stmt->fetchColumn();
     
     // Create default collections
     $defaultCollections = ['Unsorted'];
